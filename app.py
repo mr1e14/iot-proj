@@ -1,9 +1,16 @@
 from flask import Flask, request
-import os
 
 app = Flask(__name__, instance_relative_config=True)
+app.config.from_pyfile('config.py')
 
 IOT_ENV = {"temp": 1, "humidity": 55}
+
+
+@app.route('/register', methods=['POST'])
+def register_client():
+    if request.form.get("id") in app.config['CLIENTS']:
+        return app.config['POST_TOKEN']
+    return 'illegal_device'
 
 
 @app.route('/read', methods=['GET'])
@@ -20,6 +27,10 @@ def read_environment():
 @app.route('/iot', methods=['POST'])
 def iot_handler():
     token = request.form.get('token')
+
+    if token != app.config['POST_TOKEN']:
+        return 'illegal_device'
+
     temp = request.form.get('temp')
     humidity = request.form.get('humidity')
 
@@ -32,14 +43,14 @@ def iot_handler():
     if temp is humidity is None:
         return 'invalid_message'
 
-    return "success"
+    return "200"
 
 
 @app.route('/')
 def homepage():
-    return 'This is homepage'
+    return '200'
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
-    app.secret_key = os.urandom(24)
+    app.run()
+
