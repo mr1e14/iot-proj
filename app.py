@@ -10,7 +10,7 @@ IOT_ENV = {"temp": 1, "humidity": 55}
 def register_client():
     if request.form.get("id") in app.config['CLIENTS']:
         return app.config['POST_TOKEN']
-    return 'illegal_device'
+    return '403', 403
 
 
 @app.route('/read', methods=['GET'])
@@ -29,7 +29,7 @@ def iot_handler():
     token = request.form.get('token')
 
     if token != app.config['POST_TOKEN']:
-        return 'illegal_device'
+        return '403', 403
 
     temp = request.form.get('temp')
     humidity = request.form.get('humidity')
