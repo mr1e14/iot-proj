@@ -47,8 +47,9 @@ void loop()
     String postParams = "token=" + token + "&temp=" + String(temp) + "&humidity=" + String(humidity);
     http.begin(readingsURL); 
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    int httpCode = http.POST(postParams);
-    http.writeToStream(&Serial);  
+    if (http.POST(postParams) == 403){
+      token = "";
+    }
     http.end();
   }
   delay(5000);
