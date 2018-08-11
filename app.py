@@ -1,9 +1,40 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
+from flask_ask import Ask, statement, question
+from web_assets import pi_img
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
+ask = Ask(app, '/alexa')
 
-IOT_ENV = {"temp": 1, "humidity": 55}
+IOT_ENV = {"temp": None, "humidity": None}
+
+
+@ask.launch
+def launch():
+    card_title = render_template('card_title')
+    question_text = render_template('welcome')
+    return question(question_text).standard_card(card_title, question_text, pi_img)
+
+
+@ask.intent('EnvIntent', mapping={'prop': 'Property', 'warmth': 'Warmth'})
+def env(prop, warmth):
+    card_title = render_template('card_title')
+
+    if warmth is prop is None:
+        answer = render_template('temp_and_humidity').format(IOT_ENV['temp'], IOT_ENV['humidity'])
+        return statement(answer).standard_card(card_title, answer, pi_img)
+
+    if warmth is not None:
+        answer = render_template('temp') % IOT_ENV["temp"]
+        return statement(answer).standard_card(card_title, answer, pi_img)
+
+    if prop == 'humidity':
+        answer = render_template('humidity') % IOT_ENV["humidity"]
+    else:
+        # it's only temp or humidity at the moment
+        answer = render_template('temp') % IOT_ENV["temp"]
+
+    return statement(answer).standard_card(card_title, answer, pi_img)
 
 
 @app.route('/register', methods=['POST'])

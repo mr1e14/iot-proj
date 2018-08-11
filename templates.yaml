@@ -1,0 +1,13 @@
+welcome: |
+    Raspberry P.I. ... At your service.
+
+card_title: Raspberry P.I.
+
+temp_and_humidity:
+    Currently, it's {0} degrees, and humidity is at {1}%
+
+temp:
+    Currently, it's %d degrees in your room
+
+humidity:
+    Humidity is at %d per cent right now
