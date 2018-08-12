@@ -1,6 +1,10 @@
 from flask import Flask, request, render_template
 from flask_ask import Ask, statement, question
 from web_assets import pi_img
+import logging
+
+logging.basicConfig(filename='logs/requests.log', format='%(asctime)s %(message)s')
+logging.getLogger('flask_ask').setLevel(logging.DEBUG)
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.py')
