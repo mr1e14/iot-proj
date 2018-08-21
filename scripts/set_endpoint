@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Retrieve ngrok tunnel URL and set alexa skill endpoint to that URL
+#
+# Author: mr1e14
+#
+# Input:
+# $1 - ask-cli user profile
+# $2 - alexa skill ID
+# $3 - url path to skill logic (optional)
+
+if [[ ! $1 || ! $2 ]]; then
+	echo -e  "Usage: set_endpoint ask-profile skill-id [path]\n"
+	echo  "Examples: "
+	echo "set_endpoint default amzn1.ask.skil.9213a-4324-6m32... "
+	echo -e  "set_endpoint myprofile amzn1.ask.skil.9213a-4324-6m32... url/to/skill\n "
+	echo "Use the [path] option to set the URL to wherever your skill listens for requests. Leave it if it listens on homepage."
+	exit 1
+fi
+
+profile=$1
+skillId=$2
+path=$3
+
+# get url
+
+tunnels="curl -s 127.0.0.1:4040/api/tunnels"
+url="$($tunnels | jq '.tunnels[] | .public_url ' -r )"
+
+if [[ ! $url ]]; then
+	echo "Failed to retrieve ngrok URL."
+	exit 2
+fi
+
+url="$url/$path"
+echo "ngrok url: $url"
+
+# download skill schema
+
+echo "Downloading old schema..."
+old_schema="ask api get-skill -p $profile -s $skillId"
+
+if [[ ! $old_schema ]]; then
+	echo "Failed to download schema"
+	exit 3
+fi
+
+# replace old URL with new one
+
+schema_dir=~/projects/ask_cli
+new_schema=$schema_dir/new_schema.json
+schema_json="$($old_schema | jq --arg url "$url" '.manifest.apis.custom.endpoint.uri |= $url ')"
+echo $schema_json > $new_schema
+
+# upload
+echo "Uploading new schema..."
+ask api update-skill -p $profile -s $skillId -f $new_schema
+echo "Done."
+
