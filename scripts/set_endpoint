@@ -37,8 +37,10 @@ echo "ngrok url: $url"
 
 # download skill schema
 
+ASK="/home/pi/.npm_global/bin/ask"
+
 echo "Downloading old schema..."
-old_schema="ask api get-skill -p $profile -s $skillId"
+old_schema="$ASK api get-skill -p $profile -s $skillId"
 
 if [[ ! $old_schema ]]; then
 	echo "Failed to download schema"
@@ -54,6 +56,6 @@ echo $schema_json > $new_schema
 
 # upload
 echo "Uploading new schema..."
-ask api update-skill -p $profile -s $skillId -f $new_schema
+$ASK api update-skill -p $profile -s $skillId -f $new_schema
 echo "Done."
 
