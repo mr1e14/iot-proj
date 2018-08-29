@@ -24,8 +24,21 @@ path=$3
 
 # get url
 
-tunnels="curl -s 127.0.0.1:4040/api/tunnels"
-url="$($tunnels | jq '.tunnels[] | .public_url ' -r )"
+attempt=0
+max_attempts=5
+
+while [[ ! $url ]] && [[ attempt -lt  max_attempts ]]
+do	
+	if [[ $attempt > 0 ]]; then
+		echo "Did not find url at $attempt attempt"
+		sleep 5
+		echo "Retrying..."
+	fi
+
+	tunnels="curl -s 127.0.0.1:4040/api/tunnels"
+	url="$($tunnels | jq '.tunnels[] | .public_url ' -r )"
+	attempt=$((attempt + 1))
+done
 
 if [[ ! $url ]]; then
 	echo "Failed to retrieve ngrok URL."
@@ -35,27 +48,27 @@ fi
 url="$url/$path"
 echo "ngrok url: $url"
 
-# download skill schema
+# download skill schema and replace URI
 
 ASK="/home/pi/.npm_global/bin/ask"
+get_schema="$ASK api get-skill -p $profile -s $skillId"
+
+schema_dir=~/projects/ask_cli
+schema_file=$schema_dir/schema.json
 
 echo "Downloading old schema..."
-old_schema="$ASK api get-skill -p $profile -s $skillId"
 
-if [[ ! $old_schema ]]; then
+schema_json="$($get_schema | jq --arg url "$url" '.manifest.apis.custom.endpoint.uri |= $url ')"
+
+if [[ ! $schema_json ]]; then
 	echo "Failed to download schema"
 	exit 3
 fi
 
-# replace old URL with new one
-
-schema_dir=~/projects/ask_cli
-new_schema=$schema_dir/new_schema.json
-schema_json="$($old_schema | jq --arg url "$url" '.manifest.apis.custom.endpoint.uri |= $url ')"
-echo $schema_json > $new_schema
+echo $schema_json > $schema_file
 
 # upload
 echo "Uploading new schema..."
-$ASK api update-skill -p $profile -s $skillId -f $new_schema
+$ASK api update-skill -p $profile -s $skillId -f $schema_file
 echo "Done."
 
