@@ -11,11 +11,23 @@ def _initialize_lights():
     return lights
 
 
+class Room:
+    BEDROOM = 'BEDROOM'
+    LOUNGE = 'LOUNGE'
+
+
+class NotificationLevel:
+    OK = 0, 255, 100
+    INFO = 0, 150, 255
+    WARNING = 255, 150, 0
+    ERROR = 255, 0, 50
+
+
 class LightManager:
 
     def __init__(self):
         self.lights = _initialize_lights()
-        self.default = self.get_light_by_name('lounge')
+        self.default = self.get_light_by_name(Room.LOUNGE)
 
     def get_light_by_name(self, name):
         for light in self.lights:
@@ -33,15 +45,8 @@ class LightManager:
         else:
             self.default.start_flow(flow)
 
-    def notify(self, status='info', *bulbs):
-        if status == 'info':
-            red, green, blue = 0, 0, 255
-        elif status == 'ok':
-            red, green, blue = 0, 255, 0
-        elif status == 'warn':
-            red, green, blue = 255, 0, 0
-        else:
-            raise KeyError
+    def notify(self, level=NotificationLevel.INFO, *bulbs):
+        red, green, blue = level
 
         flow = Flow(count=3, transitions=pulse(red, green, blue))
 
