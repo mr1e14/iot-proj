@@ -68,17 +68,18 @@ class LightManager:
         self.default = self.get_light_by_name(name)
 
     def fade(self, duration, turn_off=False, *bulbs):
-        max_requests_per_minute = 40
-        min_interval = 60 / max_requests_per_minute  # 60 seconds
+        max_requests_per_minute = 60
+        bulb_calls_per_iteration = 3
+        max_iterations_per_minute = max_requests_per_minute / bulb_calls_per_iteration
+        min_interval = 60 / max_iterations_per_minute  # 60 seconds
 
         if len(bulbs) == 0:
             bulbs = [self.default]
 
         for bulb in bulbs:
-            initial_brightness = bulb.get_properties(['bright']).get('bright')
-            interval = duration / _get_total_fade_steps(initial_brightness)
-            interval = max(min_interval, interval)
             current_props = bulb.get_properties(['bright', 'ct', 'rgb', 'flowing'])
+            initial_brightness = int(current_props['bright'])
+            interval = max(min_interval, duration / _get_total_fade_steps(initial_brightness))
             _fade(bulb, interval, current_props, turn_off)
 
 
@@ -87,7 +88,8 @@ def _fade(bulb, interval, props, turn_off):
         if props != bulb.get_properties(['bright', 'ct', 'rgb', 'flowing']):
             return
 
-        power, brightness = bulb.get_properties(['power', 'bright']).values()
+        power = props['power']
+        brightness = int(props['bright'])
 
         if power == 'off':
             return
@@ -115,8 +117,8 @@ def _get_total_fade_steps(initial_brightness):
 
 
 def __get_decreased_brightness(brightness):
-    max_brightness = 1
-    min_brightness = 99
-    diff = max(1, round(brightness - (brightness / 10)))
+    min_brightness = 1
+    max_brightness = 99
+    diff = max(1, round(brightness / 10))
 
     return max(min_brightness, min((brightness - diff), max_brightness))
