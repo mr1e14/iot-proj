@@ -77,7 +77,7 @@ class LightManager:
             bulbs = [self.default]
 
         for bulb in bulbs:
-            current_props = bulb.get_properties(['bright', 'ct', 'rgb', 'flowing'])
+            current_props = bulb.get_properties(_get_required_props())
             initial_brightness = int(current_props['bright'])
             interval = max(min_interval, duration / _get_total_fade_steps(initial_brightness))
             _fade(bulb, interval, current_props, turn_off)
@@ -85,7 +85,7 @@ class LightManager:
 
 def _fade(bulb, interval, props, turn_off):
         # if another request was made, abort task
-        if props != bulb.get_properties(['bright', 'ct', 'rgb', 'flowing']):
+        if props != bulb.get_properties(_get_required_props()):
             return
 
         power = props['power']
@@ -101,7 +101,7 @@ def _fade(bulb, interval, props, turn_off):
         new_brightness = __get_decreased_brightness(brightness)
         bulb.set_brightness(new_brightness)
 
-        props = bulb.get_properties(['bright', 'ct', 'rgb', 'flowing'])
+        props = bulb.get_properties(_get_required_props())
         threading.Timer(interval, _fade, [bulb, interval, props, turn_off]).start()
 
 
@@ -122,3 +122,7 @@ def __get_decreased_brightness(brightness):
     diff = max(1, round(brightness / 10))
 
     return max(min_brightness, min((brightness - diff), max_brightness))
+
+
+def _get_required_props():
+    return ['bright', 'ct', 'rgb', 'flowing', 'power']
