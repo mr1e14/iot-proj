@@ -5,7 +5,7 @@ import logging
 from os.path import join, dirname
 
 logs_dir = join(dirname(__file__), 'logs')
-logging.basicConfig(filename=join(logs_dir, 'lights.log'), format='%(asctime)s %(message)s')
+logging.basicConfig(filename=join(logs_dir, 'lights.log'), format='%(asctime)s %(message)s', level=logging.INFO)
 
 
 def _initialize_lights():
@@ -106,18 +106,20 @@ class LightManager:
             _fade(bulb, interval, current_props, turn_off, retries)
 
 
-def _fade(bulb, interval, props, turn_off, retries):
+def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
         error_msg = 'Error occurred in __fade: {}'
 
         # if another request was made, abort task
         try:
             if props != bulb.get_properties(_get_required_props()):
+                logging.info('Another request was made. Aborting fade.')
                 return
         except BulbException as err:
             #  BulbException is fine - connection could be temporarily down
             logging.error(error_msg.format(err))
             if retries > 0:
-                threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                logging.info('Retrying. Attempts left: {}'.format(retries))
+                threading.Timer(retry_delay, _fade, [bulb, interval, props, turn_off, retries-1]).start()
                 return
 
         power = props['power']
@@ -131,17 +133,24 @@ def _fade(bulb, interval, props, turn_off, retries):
             return
 
         new_brightness = __get_decreased_brightness(brightness)
+        updated_brightness = False
         try:
             bulb.set_brightness(new_brightness)
+            updated_brightness = True
+            props = bulb.get_properties(_get_required_props())
         except BulbException as err:
             logging.error(error_msg.format(err))
+
             if retries > 0:
-                threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                logging.info('Retrying. Attempts left: {}'.format(retries))
+                if updated_brightness:
+                    props['bright'] = new_brightness
+
+                threading.Timer(retry_delay, _fade, [bulb, interval, props, turn_off, retries-1]).start()
                 return
 
         logging.info('Fade step. New brightness: {}'.format(new_brightness))
 
-        props = bulb.get_properties(_get_required_props())
         threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries]).start()
 
 
