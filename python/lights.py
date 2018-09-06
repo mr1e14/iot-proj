@@ -144,7 +144,7 @@ def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
             if retries > 0:
                 logging.info('Retrying. Attempts left: {}'.format(retries))
                 if updated_brightness:
-                    props['bright'] = new_brightness
+                    props['bright'] = str(new_brightness)
 
                 threading.Timer(retry_delay, _fade, [bulb, interval, props, turn_off, retries-1]).start()
                 return
@@ -175,3 +175,4 @@ def __get_decreased_brightness(brightness):
 
 def _get_required_props():
     return ['bright', 'ct', 'rgb', 'flowing', 'power']
+
