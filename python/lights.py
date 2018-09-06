@@ -1,14 +1,21 @@
-from yeelight import Bulb, Flow, discover_bulbs
+from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 import threading
+import logging
+from os.path import join, dirname
+
+logs_dir = join(dirname(__file__), 'logs')
+logging.basicConfig(filename=join(logs_dir, 'lights.log'), format='%(asctime)s %(message)s')
 
 
 def _initialize_lights():
+    logging.info('Initializing lights')
     lights = []
 
     for instance in discover_bulbs():
         lights.append(Bulb(instance['ip']))
 
+    logging.info('Found {} lights'.format(len(lights)))
     return lights
 
 
@@ -18,7 +25,8 @@ class Room:
 
 
 class NotificationLevel:
-    OK = 0, 255, 100
+    #    R   G    B
+    OK = 0,  255, 100
     INFO = 0, 150, 255
     WARNING = 255, 150, 0
     ERROR = 255, 0, 50
@@ -26,67 +34,91 @@ class NotificationLevel:
 
 class LightManager:
 
-    def __init__(self):
-        self.lights = _initialize_lights()
-        self.default = self.get_light_by_name(Room.LOUNGE)
+    def __init__(self, default_room=Room.LOUNGE):
+        self.__lights = _initialize_lights()
+        self.__default = self.get_light_by_name(default_room)
 
     def get_light_by_name(self, name):
-        for light in self.lights:
+        for light in self.__lights:
             if light.get_properties(['name']).get('name') == name:
                 return light
 
         return None
 
     def start_disco(self, *bulbs):
+        logging.info('Starting disco')
+
         flow = Flow(count=0, transitions=disco())
 
-        if len(bulbs) > 0:
-            for bulb in bulbs:
-                bulb.start_flow(flow)
-        else:
-            self.default.start_flow(flow)
+        if len(bulbs) == 0:
+            bulbs = [self.__default]
+
+        for bulb in bulbs:
+            bulb.start_flow(flow)
 
     def notify(self, level=NotificationLevel.INFO, *bulbs):
+        logging.info('Flashing notification ({})'.format(level))
+
         red, green, blue = level
+        flow = Flow(count=3, transitions=pulse(red, green, blue, duration=400))
 
-        flow = Flow(count=3, transitions=pulse(red, green, blue))
+        if len(bulbs) == 0:
+            bulbs = [self.__default]
 
-        if len(bulbs) > 0:
-            for bulb in bulbs:
-                bulb.start_flow(flow)
-        else:
-            self.default.start_flow(flow)
+        for bulb in bulbs:
+            bulb.start_flow(flow)
 
     def stop_flow(self, *bulbs):
-        if len(bulbs) > 0:
-            for bulb in bulbs:
-                bulb.stop_flow()
-        else:
-            self.default.stop_flow()
+        logging.info('Stopping flow')
+
+        if len(bulbs) == 0:
+            bulbs = [self.__default]
+
+        for bulb in bulbs:
+            bulb.stop_flow()
 
     def set_default(self, name):
-        self.default = self.get_light_by_name(name)
+        light = self.get_light_by_name(name)
+        if light is not None:
+            self.__default = self.get_light_by_name(name)
+            logging.info('Set new default light to {}'.format(name))
+        else:
+            logging.warning('Default not set. No such light: '.format(name))
 
-    def fade(self, duration, turn_off=False, *bulbs):
+    def fade(self, duration, turn_off=False, retries=5, *bulbs):
+        logging.info('Fade started. Duration = {0}, turn_off={1}'.format(duration, turn_off))
+
         max_requests_per_minute = 60
         bulb_calls_per_iteration = 3
         max_iterations_per_minute = max_requests_per_minute / bulb_calls_per_iteration
         min_interval = 60 / max_iterations_per_minute  # 60 seconds
 
         if len(bulbs) == 0:
-            bulbs = [self.default]
+            bulbs = [self.__default]
 
         for bulb in bulbs:
             current_props = bulb.get_properties(_get_required_props())
             initial_brightness = int(current_props['bright'])
             interval = max(min_interval, duration / _get_total_fade_steps(initial_brightness))
-            _fade(bulb, interval, current_props, turn_off)
+
+            logging.info('Interval set to {}'.format(interval))
+
+            _fade(bulb, interval, current_props, turn_off, retries)
 
 
-def _fade(bulb, interval, props, turn_off):
+def _fade(bulb, interval, props, turn_off, retries):
+        error_msg = 'Error occurred in __fade: {}'
+
         # if another request was made, abort task
-        if props != bulb.get_properties(_get_required_props()):
-            return
+        try:
+            if props != bulb.get_properties(_get_required_props()):
+                return
+        except BulbException as err:
+            #  BulbException is fine - connection could be temporarily down
+            logging.error(error_msg.format(err))
+            if retries > 0:
+                threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                return
 
         power = props['power']
         brightness = int(props['bright'])
@@ -99,10 +131,18 @@ def _fade(bulb, interval, props, turn_off):
             return
 
         new_brightness = __get_decreased_brightness(brightness)
-        bulb.set_brightness(new_brightness)
+        try:
+            bulb.set_brightness(new_brightness)
+        except BulbException as err:
+            logging.error(error_msg.format(err))
+            if retries > 0:
+                threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                return
+
+        logging.info('Fade step. New brightness: {}'.format(new_brightness))
 
         props = bulb.get_properties(_get_required_props())
-        threading.Timer(interval, _fade, [bulb, interval, props, turn_off]).start()
+        threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries]).start()
 
 
 def _get_total_fade_steps(initial_brightness):
