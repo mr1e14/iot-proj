@@ -1,13 +1,28 @@
 welcome: |
-    Raspberry P.I. ... At your service.
+  <speak>
+    <p> Raspberry Pi. </p>
+    <p> At your service </p>
+  <speak>
 
-card_title: Raspberry P.I.
+card_title_pi: Raspberry Pi
+card_title_lights: Lights
+card_title_sensor: Your IoT
 
 temp_and_humidity:
     Currently, it's {0} degrees, and humidity is at {1}%
 
 temp:
-    Currently, it's %s degrees in your room
+    Currently, it's {} degrees in your room
 
 humidity:
-    Humidity is at %s per cent right now
+    Humidity is at {} per cent right now
+
+disco_lights: |
+  <speak>
+    <prosody pitch="high"> Starting disco.</prosody>
+    Have fun!
+  </speak>
+
+no_lights: Sorry. No lights are currently connected.
+
+no_such_light: I'm afraid there's no such light.

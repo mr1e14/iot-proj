@@ -1,8 +1,9 @@
 import logging
 from os.path import dirname, join, abspath
-from flask import Flask, request, render_template
-from flask_ask import Ask, statement, question
-from web_assets import pi_img
+from flask import Flask, request
+from flask_ask import Ask
+from alexa import welcome, climate_info, start_disco, stop_flow
+
 
 app_dir = dirname(__file__)
 logs_dir = join(app_dir, 'logs')
@@ -11,7 +12,7 @@ logging.basicConfig(filename=join(logs_dir, 'requests.log'), format='%(asctime)s
 logging.getLogger('flask_ask').setLevel(logging.DEBUG)
 
 app = Flask(__name__, instance_relative_config=True)
-app.config.from_pyfile(abspath(join(app_dir,'instance/config.py')))
+app.config.from_pyfile(abspath(join(app_dir, 'instance/config.py')))
 ask = Ask(app, '/alexa')
 
 IOT_ENV = {"temp": None, "humidity": None}
@@ -19,30 +20,22 @@ IOT_ENV = {"temp": None, "humidity": None}
 
 @ask.launch
 def launch():
-    card_title = render_template('card_title')
-    question_text = render_template('welcome')
-    return question(question_text).standard_card(card_title, question_text, pi_img)
+    return welcome()
 
 
-@ask.intent('EnvIntent', mapping={'prop': 'Property', 'warmth': 'Warmth'})
-def env(prop, warmth):
-    card_title = render_template('card_title')
+@ask.intent('ClimateIntent', mapping={'prop': 'Property', 'warmth': 'Warmth'})
+def climate(prop, warmth):
+    return climate_info(prop, warmth)
 
-    if warmth is prop is None:
-        answer = render_template('temp_and_humidity').format(IOT_ENV['temp'], IOT_ENV['humidity'])
-        return statement(answer).standard_card(card_title, answer, pi_img)
 
-    if warmth is not None:
-        answer = render_template('temp') % IOT_ENV["temp"]
-        return statement(answer).standard_card(card_title, answer, pi_img)
+@ask.intent('DiscoLightsIntent', mapping={'room': 'Room'})
+def disco_lights(room):
+    return start_disco(room)
 
-    if prop == 'humidity':
-        answer = render_template('humidity') % IOT_ENV["humidity"]
-    else:
-        # it's only temp or humidity at the moment
-        answer = render_template('temp') % IOT_ENV["temp"]
 
-    return statement(answer).standard_card(card_title, answer, pi_img)
+@ask.intent('StopFlowIntent', mapping={'room': 'Room'})
+def stop_lights(room):
+    return stop_flow(room)
 
 
 @app.route('/register', methods=['POST'])

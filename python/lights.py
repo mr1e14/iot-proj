@@ -40,7 +40,7 @@ class LightManager:
 
     def get_light_by_name(self, name):
         for light in self.__lights:
-            if light.get_properties(['name']).get('name') == name:
+            if light.get_properties(['name']).get('name').upper() == name.upper():
                 return light
 
         return None
@@ -84,6 +84,20 @@ class LightManager:
             logging.info('Set new default light to {}'.format(name))
         else:
             logging.warning('Default not set. No such light: '.format(name))
+
+    def get_all(self):
+        return self.__lights
+
+    def stop_fade(self, *bulbs):
+        logging.info('Aborting fade on user request')
+
+        if len(bulbs) == 0:
+            bulbs = [self.__default]
+
+        #  fade effect is aborted if any change is made on the bulb
+        for bulb in bulbs:
+            current_brightness = int(bulb.get_properties(['bright']).get('bright'))
+            bulb.set_brightness(current_brightness + 1)
 
     def fade(self, duration, turn_off=False, retries=5, *bulbs):
         logging.info('Fade started. Duration = {0}, turn_off={1}'.format(duration, turn_off))
