@@ -2,20 +2,17 @@ import logging
 from os.path import dirname, join, abspath
 from flask import Flask, request
 from flask_ask import Ask
-from alexa import welcome, climate_info, start_disco, stop_flow
-
+from alexa import  welcome, climate_info, start_disco, stop_flow
+from alexa import IOT_ENV # temporary solution
 
 app_dir = dirname(__file__)
 logs_dir = join(app_dir, 'logs')
 
-logging.basicConfig(filename=join(logs_dir, 'requests.log'), format='%(asctime)s %(message)s')
-logging.getLogger('flask_ask').setLevel(logging.DEBUG)
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile(abspath(join(app_dir, 'instance/config.py')))
 ask = Ask(app, '/alexa')
 
-IOT_ENV = {"temp": None, "humidity": None}
 
 
 @ask.launch

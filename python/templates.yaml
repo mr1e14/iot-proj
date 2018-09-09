@@ -2,7 +2,7 @@ welcome: |
   <speak>
     <p> Raspberry Pi. </p>
     <p> At your service </p>
-  <speak>
+  </speak>
 
 card_title_pi: Raspberry Pi
 card_title_lights: Lights
@@ -19,8 +19,7 @@ humidity:
 
 disco_lights: |
   <speak>
-    <prosody pitch="high"> Starting disco.</prosody>
-    Have fun!
+    <prosody pitch="high"> Starting disco. Have fun!</prosody>
   </speak>
 
 no_lights: Sorry. No lights are currently connected.
