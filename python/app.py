@@ -14,7 +14,6 @@ app.config.from_pyfile(abspath(join(app_dir, 'instance/config.py')))
 ask = Ask(app, '/alexa')
 
 
-
 @ask.launch
 def launch():
     return welcome()

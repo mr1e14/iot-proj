@@ -34,7 +34,7 @@ class NotificationLevel:
 
 class LightManager:
 
-    def __init__(self, default_room=Room.LOUNGE):
+    def __init__(self, default_room=Room.BEDROOM):
         self.__lights = _initialize_lights()
         self.__default = self.get_light_by_name(default_room)
 
@@ -85,7 +85,7 @@ class LightManager:
         else:
             logging.warning('Default not set. No such light: '.format(name))
 
-    def get_all(self):
+    def get_all_lights(self):
         return self.__lights
 
     def stop_fade(self, *bulbs):

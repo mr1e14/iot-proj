@@ -24,4 +24,4 @@ disco_lights: |
 
 no_lights: Sorry. No lights are currently connected.
 
-no_such_light: I'm afraid there's no such light.
+no_such_light: I'm afraid the light called {} is not available
