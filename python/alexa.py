@@ -2,6 +2,7 @@ from flask import render_template
 from flask_ask import question, statement
 from .web_assets import *
 from .lights import *
+import time
 
 
 IOT_ENV = {"temp": None, "humidity": None}
@@ -51,23 +52,37 @@ class LightAction:
         self.card_img = card_img
 
     def start_disco(self, room):
-        if len(self.light_manager.get_all_lights()) == 0:
-            return self.__stmt_no_lights()
 
         if room is None:
             self.light_manager.start_disco()
-            return self.__stmt_disco_ok()
+            stmt = self.__stmt_disco_ok()
         else:
             if room == 'all' or room == 'everywhere':
                 self.light_manager.start_disco(self.light_manager.get_all_lights())
-                return self.__stmt_disco_ok()
+                stmt = self.__stmt_disco_ok()
             else:
                 light = self.light_manager.get_light_by_name(room)
                 if light is not None:
                     self.light_manager.start_disco(light)
-                    return self.__stmt_disco_ok()
+                    stmt = self.__stmt_disco_ok()
                 else:
-                    return self.__stmt_no_such_light(room)
+                    stmt = self.__stmt_no_such_light(room)
+
+        # python will not wait for result of 'get_all_lights()'
+        # hence the below is necessary
+        
+        found_lights = True
+        attempts = 5
+
+        while len(self.light_manager.get_all_lights()) == 0 and attempts >= 0:
+            time.sleep(0.5)
+            if attempts == 0:
+                found_lights = False
+
+        if found_lights:
+            return stmt
+        else:
+            return self.__stmt_no_lights()
 
     def stop_flow(self, room):
         if room is None or room == 'all' or room == 'everywhere':
