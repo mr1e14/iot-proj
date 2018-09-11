@@ -1,13 +1,11 @@
 from flask import render_template
 from flask_ask import question, statement
-from .web_assets import *
-from .lights import *
+from web_assets import *
+from lights import *
 import time
 
 
 IOT_ENV = {"temp": None, "humidity": None}
-
-LIGHT_CARD_TITLE = render_template('card_title_lights')
 
 
 def welcome():
@@ -38,11 +36,11 @@ def climate_info(prop, warmth):
 
 
 def start_disco(room):
-    return LightAction(LightManager(), LIGHT_CARD_TITLE, light_img).start_disco(room)
+    return LightAction(LightManager(), render_template('card_title_lights'), light_img).start_disco(room)
 
 
 def stop_flow(room):
-    return LightAction(LightManager(), LIGHT_CARD_TITLE, light_img).stop_flow(room)
+    return LightAction(LightManager(), render_template('card_title_lights'), light_img).stop_flow(room)
 
 
 class LightAction:
@@ -52,41 +50,28 @@ class LightAction:
         self.card_img = card_img
 
     def start_disco(self, room):
+        if len(self.light_manager.get_all_lights()) == 0:
+            return self.__stmt_no_lights()
 
         if room is None:
             self.light_manager.start_disco()
-            stmt = self.__stmt_disco_ok()
+            return self.__stmt_disco_ok()
         else:
             if room == 'all' or room == 'everywhere':
-                self.light_manager.start_disco(self.light_manager.get_all_lights())
-                stmt = self.__stmt_disco_ok()
+                self.light_manager.start_disco(*self.light_manager.get_all_lights())
+                return self.__stmt_disco_ok()
             else:
                 light = self.light_manager.get_light_by_name(room)
                 if light is not None:
                     self.light_manager.start_disco(light)
-                    stmt = self.__stmt_disco_ok()
+                    return self.__stmt_disco_ok()
                 else:
-                    stmt = self.__stmt_no_such_light(room)
+                    return self.__stmt_no_such_light(room)
 
-        # python will not wait for result of 'get_all_lights()'
-        # hence the below is necessary
-        
-        found_lights = True
-        attempts = 5
-
-        while len(self.light_manager.get_all_lights()) == 0 and attempts >= 0:
-            time.sleep(0.5)
-            if attempts == 0:
-                found_lights = False
-
-        if found_lights:
-            return stmt
-        else:
-            return self.__stmt_no_lights()
-
+       
     def stop_flow(self, room):
         if room is None or room == 'all' or room == 'everywhere':
-            self.light_manager.stop_flow(self.light_manager.get_all_lights())
+            self.light_manager.stop_flow(*self.light_manager.get_all_lights())
             return self.__stmt_stopped_lights()
         else:
             light = self.light_manager.get_light_by_name(room)
@@ -100,7 +85,7 @@ class LightAction:
         return self.card_title, 'Started disco lights', self.card_img
 
     def __card_no_lights(self):
-        return self.card_title, 'No lights available', self.card_img
+        return self.card_title, render_template('no_lights'), self.card_img
 
     def __card_no_such_light(self, light_name):
         return self.card_title, 'No light called {}'.format(light_name), self.card_img
@@ -109,14 +94,14 @@ class LightAction:
         return self.card_title, 'Ok', self.card_img
 
     def __stmt_disco_ok(self):
-        return statement(render_template('disco_lights')).standard_card(self.__card_disco_ok())
+        return statement(render_template('disco_lights')).standard_card(*self.__card_disco_ok())
 
     def __stmt_no_lights(self):
-        return statement(render_template('no_lights')).standard_card(self.__card_no_lights())
+        return statement(render_template('no_lights')).standard_card(*self.__card_no_lights())
 
     def __stmt_no_such_light(self, light_name):
-        return statement(render_template('no_such_light')).standard_card(self.__card_no_such_light(light_name))
+        return statement(render_template('no_such_light').format(light_name)).standard_card(*self.__card_no_such_light(light_name))
 
     def __stmt_stopped_lights(self):
-        return statement('OK').standard_card(self.__card_stopped_lights())
+        return statement('OK').standard_card(*self.__card_stopped_lights())
 
