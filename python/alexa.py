@@ -83,16 +83,22 @@ class LightAction:
                 return self.__stmt_no_such_light(room)
 
     def __card_disco_ok(self):
-        return self.card_title, 'Started disco lights', self.card_img
+        return self.card_title, render_template('disco_lights_card'), self.card_img
 
     def __card_no_lights(self):
         return self.card_title, render_template('no_lights'), self.card_img
 
     def __card_no_such_light(self, light_name):
-        return self.card_title, 'No light called {}'.format(light_name), self.card_img
+        return self.card_title, render_template('no_such_light').format(light_name), self.card_img
 
     def __card_stopped_lights(self):
-        return self.card_title, 'Stopped', self.card_img
+        return self.card_title, render_template('disco_lights_stopped_card'), self.card_img
+
+    def __card_fade_ok(self, room, duration):
+        return self.card_title, render_template('fade_started_card').format(name=room, duration=duration), self.card_img
+
+    def __card_fade_stopped(self, room):
+        return self.card_title, render_template('fade_stopped_card').format(name=room)
 
     def __stmt_disco_ok(self):
         return statement(render_template('disco_lights')).standard_card(*self.__card_disco_ok())

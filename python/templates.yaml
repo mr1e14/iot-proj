@@ -22,6 +22,18 @@ disco_lights: |
     <prosody pitch="high"> Starting disco. Have fun!</prosody>
   </speak>
 
+disco_lights_card: Started disco lights
+disco_lights_stopped_card: Stopped disco lights
+
+fade_started: |
+  <speak>
+    <prosody pitch="x-low"> Fading {name} light over {duration}</prosody>
+  </speak>
+
+fade_started_card: Fading {name} light over {duration}
+fade_stopped_card: Stopped fading {name} light
+
 no_lights: Sorry. No lights are currently connected.
 
 no_such_light: I'm afraid the light called {} is not available
+
