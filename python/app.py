@@ -2,7 +2,7 @@ import logging
 from os.path import dirname, join, abspath
 from flask import Flask, request
 from flask_ask import Ask
-from alexa import  welcome, climate_info, start_disco, stop_flow
+from alexa import  welcome, climate_info, start_disco, stop_flow, start_fade, stop_fade
 from alexa import IOT_ENV # temporary solution
 
 app_dir = dirname(__file__)
@@ -32,6 +32,16 @@ def disco_lights(room):
 @ask.intent('StopFlowIntent', mapping={'room': 'Room'})
 def stop_lights(room):
     return stop_flow(room)
+
+
+@ask.intent('FadeIntent', mapping={'room': 'Room', 'duration': 'Duration', 'off': 'Off'})
+def fade_lights(room, duration, off):
+    return start_fade(room, duration, off)
+
+
+@ask.intent('StopFadeIntent', mapping={'room': 'Room'})
+def stop_fade_lights(room):
+    return stop_fade(room)
 
 
 @app.route('/register', methods=['POST'])
