@@ -2,7 +2,6 @@ from flask import render_template
 from flask_ask import question, statement
 from web_assets import *
 from lights import *
-import time
 
 
 IOT_ENV = {"temp": None, "humidity": None}
@@ -68,7 +67,6 @@ class LightAction:
                 else:
                     return self.__stmt_no_such_light(room)
 
-       
     def stop_flow(self, room):
         if room is None or room == 'all' or room == 'everywhere':
             self.light_manager.stop_flow(*self.light_manager.get_all_lights())
@@ -91,7 +89,7 @@ class LightAction:
         return self.card_title, 'No light called {}'.format(light_name), self.card_img
 
     def __card_stopped_lights(self):
-        return self.card_title, 'Ok', self.card_img
+        return self.card_title, 'Stopped', self.card_img
 
     def __stmt_disco_ok(self):
         return statement(render_template('disco_lights')).standard_card(*self.__card_disco_ok())
@@ -100,7 +98,8 @@ class LightAction:
         return statement(render_template('no_lights')).standard_card(*self.__card_no_lights())
 
     def __stmt_no_such_light(self, light_name):
-        return statement(render_template('no_such_light').format(light_name)).standard_card(*self.__card_no_such_light(light_name))
+        return statement(render_template('no_such_light').format(
+            light_name)).standard_card(*self.__card_no_such_light(light_name))
 
     def __stmt_stopped_lights(self):
         return statement('OK').standard_card(*self.__card_stopped_lights())
