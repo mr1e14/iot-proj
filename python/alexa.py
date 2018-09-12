@@ -1,7 +1,7 @@
 from flask import render_template
 from flask_ask import question, statement
 from web_assets import *
-from lights import *
+from .lights import *
 from isodate import parse_duration
 
 IOT_ENV = {"temp": None, "humidity": None}
@@ -103,11 +103,11 @@ class LightAction:
             return self.__stmt_fade_ok(room, duration)
         else:
             if room == 'all' or room == 'everywhere':
-                self.light_manager.fade(duration, turn_off, *self.light_manager.get_all_lights())
+                self.light_manager.fade(duration, turn_off, 5, *self.light_manager.get_all_lights())
                 return self.__stmt_fade_ok(room, duration)
             else:
                 light = self.light_manager.get_light_by_name(room)
-                self.light_manager.fade(duration, turn_off, light)
+                self.light_manager.fade(duration, turn_off, 5, light)
                 return self.__stmt_fade_ok(room, duration)
 
     def stop_fade(self, room):
@@ -164,6 +164,9 @@ class LightAction:
     def __validate(self, room):
         if len(self.light_manager.get_all_lights()) == 0:
             return self.__stmt_no_lights()
+
+        if room == 'all' or room == 'everything':
+            return None
 
         if room is None:
             light = self.light_manager.get_light_by_name(self.light_manager.get_default_room())
