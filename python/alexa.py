@@ -53,8 +53,11 @@ class LightAction:
             return self.__stmt_no_lights()
 
         if room is None:
-            self.light_manager.start_disco()
-            return self.__stmt_disco_ok()
+            light = self.light_manager.get_light_by_name(self.light_manager.get_default_room())
+            if light is not None:
+                self.light_manager.start_disco()
+                return self.__stmt_disco_ok()
+            return self.__stmt_no_such_light(self.light_manager.get_default_room())
         else:
             if room == 'all' or room == 'everywhere':
                 self.light_manager.start_disco(*self.light_manager.get_all_lights())

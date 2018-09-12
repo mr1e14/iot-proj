@@ -36,6 +36,7 @@ class LightManager:
 
     def __init__(self, default_room=Room.BEDROOM):
         self.__lights = _initialize_lights()
+        self.__default_room = default_room
         self.__default = self.get_light_by_name(default_room)
 
     def get_light_by_name(self, name):
@@ -87,6 +88,9 @@ class LightManager:
 
     def get_all_lights(self):
         return self.__lights
+
+    def get_default_room(self):
+        return self.__default_room
 
     def stop_fade(self, *bulbs):
         logging.info('Aborting fade on user request')
