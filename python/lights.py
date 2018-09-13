@@ -107,9 +107,11 @@ class LightManager:
         logging.info('Fade started. Duration = {0}, turn_off={1}'.format(duration, turn_off))
 
         max_requests_per_minute = 60
-        bulb_calls_per_iteration = 3
-        max_iterations_per_minute = max_requests_per_minute / bulb_calls_per_iteration
-        min_interval = 60 / max_iterations_per_minute  # 60 seconds
+        bulb_calls_per_step = 3
+        max_steps_per_minute = max_requests_per_minute / bulb_calls_per_step
+
+        min_interval = 1
+        max_steps = _get_max_steps(duration, max_steps_per_minute)
 
         if len(bulbs) == 0:
             bulbs = [self.__default]
@@ -117,14 +119,20 @@ class LightManager:
         for bulb in bulbs:
             current_props = bulb.get_properties(_get_required_props())
             initial_brightness = int(current_props['bright'])
-            interval = max(min_interval, duration / _get_total_fade_steps(initial_brightness))
+
+            if duration <= max_steps_per_minute:
+                interval = min_interval
+                step = initial_brightness / interval
+            else:
+                interval = duration / max_steps
+                step = initial_brightness / max_steps
 
             logging.info('Interval set to {}'.format(interval))
 
-            _fade(bulb, interval, current_props, turn_off, retries)
+            _fade(bulb, interval, step, initial_brightness, current_props, turn_off, retries)
 
 
-def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
+def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_delay=15):
         error_msg = 'Error occurred in __fade: {}'
 
         # if another request was made, abort task
@@ -137,11 +145,11 @@ def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
             logging.error(error_msg.format(err))
             if retries > 0:
                 logging.info('Retrying. Attempts left: {}'.format(retries))
-                threading.Timer(retry_delay, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                threading.Timer(
+                    retry_delay, _fade, [bulb, interval, step, brightness, props, turn_off, retries-1]).start()
                 return
 
         power = props['power']
-        brightness = int(props['bright'])
 
         if power == 'off':
             return
@@ -150,10 +158,10 @@ def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
                 bulb.turn_off()
             return
 
-        new_brightness = __get_decreased_brightness(brightness)
+        new_brightness = brightness - step
         updated_brightness = False
         try:
-            bulb.set_brightness(new_brightness)
+            bulb.set_brightness(round(new_brightness))
             updated_brightness = True
             props = bulb.get_properties(_get_required_props())
         except BulbException as err:
@@ -162,33 +170,22 @@ def _fade(bulb, interval, props, turn_off, retries, retry_delay=15):
             if retries > 0:
                 logging.info('Retrying. Attempts left: {}'.format(retries))
                 if updated_brightness:
-                    props['bright'] = str(new_brightness)
-
-                threading.Timer(retry_delay, _fade, [bulb, interval, props, turn_off, retries-1]).start()
+                    props['bright'] = str(round(new_brightness))
+                    threading.Timer(
+                        retry_delay, _fade, [bulb, interval, step, new_brightness, props, turn_off, retries-1]).start()
+                else:
+                    threading.Timer(
+                        retry_delay, _fade,
+                        [bulb, interval, step, brightness, props, turn_off, retries - 1]).start()
                 return
 
         logging.info('Fade step. New brightness: {}'.format(new_brightness))
 
-        threading.Timer(interval, _fade, [bulb, interval, props, turn_off, retries]).start()
+        threading.Timer(interval, _fade, [bulb, interval, step, new_brightness, props, turn_off, retries-1]).start()
 
 
-def _get_total_fade_steps(initial_brightness):
-    steps = 0
-    brightness = initial_brightness
-
-    while brightness > 1:
-        steps += 1
-        brightness = __get_decreased_brightness(brightness)
-
-    return steps
-
-
-def __get_decreased_brightness(brightness):
-    min_brightness = 1
-    max_brightness = 99
-    diff = max(1, round(brightness / 10))
-
-    return max(min_brightness, min((brightness - diff), max_brightness))
+def _get_max_steps(duration, max_steps_per_minute):
+    return max_steps_per_minute * (1 + int(duration / 60))
 
 
 def _get_required_props():
