@@ -27,7 +27,7 @@ disco_lights_stopped_card: Stopped disco lights
 
 fade_started: |
   <speak>
-    <prosody pitch="x-low"> Fading {name} light over {duration} seconds</prosody>
+    <prosody rate="slow"> Fading {name} light over {duration} seconds</prosody>
   </speak>
 
 fade_started_card: Fading {name} light over {duration} seconds
