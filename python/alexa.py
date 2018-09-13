@@ -94,7 +94,7 @@ class LightAction:
         turn_off = off is not None
 
         if duration is not None:
-            duration = parse_duration(duration).total_seconds()
+            duration = int(parse_duration(duration).total_seconds())
         else:
             duration = 120  # default, in seconds
 
