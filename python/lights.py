@@ -3,6 +3,8 @@ from yeelight.transitions import *
 import threading
 import logging
 from os.path import join, dirname
+from collections import Counter
+
 
 logs_dir = join(dirname(__file__), 'logs')
 logging.basicConfig(filename=join(logs_dir, 'lights.log'), format='%(asctime)s %(message)s', level=logging.INFO)
@@ -94,23 +96,25 @@ class LightManager:
 
     def stop_fade(self, *bulbs):
         logging.info('Aborting fade on user request')
-
+        
         if len(bulbs) == 0:
             bulbs = [self.__default]
-
+        
         #  fade effect is aborted if any change is made on the bulb
-        for bulb in bulbs:
-            current_brightness = int(bulb.get_properties(['bright']).get('bright'))
+
+        for bulb in bulbs: 
+            current_brightness = int(bulb.get_properties(['bright'])['bright']) 
             bulb.set_brightness(current_brightness + 1)
 
     def fade(self, duration, turn_off=False, retries=5, *bulbs):
         logging.info('Fade started. Duration = {0}, turn_off={1}'.format(duration, turn_off))
 
         max_requests_per_minute = 60
-        bulb_calls_per_step = 3
-        max_steps_per_minute = max_requests_per_minute / bulb_calls_per_step
+        bulb_calls_per_step = 2
+        error_margin = 2
+        max_steps_per_minute = (max_requests_per_minute / bulb_calls_per_step) - error_margin
 
-        min_interval = 1
+        min_interval = 1 #  second
         max_steps = _get_max_steps(duration, max_steps_per_minute)
 
         if len(bulbs) == 0:
@@ -122,7 +126,7 @@ class LightManager:
 
             if duration <= max_steps_per_minute:
                 interval = min_interval
-                step = initial_brightness / interval
+                step = initial_brightness / duration
             else:
                 interval = duration / max_steps
                 step = initial_brightness / max_steps
@@ -134,10 +138,21 @@ class LightManager:
 
 def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_delay=15):
         error_msg = 'Error occurred in __fade: {}'
-
-        # if another request was made, abort task
+        
+        # if another request was made, abort task 
         try:
-            if props != bulb.get_properties(_get_required_props()):
+            #  bulb brightness is clamped (1,99) 
+            if round(brightness) <= 1:
+                brightness = 1
+                props['bright'] = 1
+            
+            current_bulb_props = bulb.get_properties(_get_required_props())
+            current = [str(x) for x in current_bulb_props.values()]
+            previous = [str(x) for x in props.values()] 
+
+            #  brightness may come as str or int
+            #  hence the below is necessary   
+            if Counter(current) != Counter(previous) or round(brightness) != int(current_bulb_props['bright']):
                 logging.info('Another request was made. Aborting fade.')
                 return
         except BulbException as err:
@@ -154,6 +169,7 @@ def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_dela
         if power == 'off':
             return
         if brightness <= 1:
+            logging.info('Finished fading')
             if turn_off:
                 bulb.turn_off()
             return
@@ -163,7 +179,10 @@ def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_dela
         try:
             bulb.set_brightness(round(new_brightness))
             updated_brightness = True
-            props = bulb.get_properties(_get_required_props())
+            props['bright'] = str(round(new_brightness))
+            
+            logging.info('Fade step. New brightness: {}'.format(new_brightness))
+            threading.Timer(interval, _fade, [bulb, interval, step, new_brightness, props, turn_off, retries]).start()
         except BulbException as err:
             logging.error(error_msg.format(err))
 
@@ -177,17 +196,14 @@ def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_dela
                     threading.Timer(
                         retry_delay, _fade,
                         [bulb, interval, step, brightness, props, turn_off, retries - 1]).start()
-                return
-
-        logging.info('Fade step. New brightness: {}'.format(new_brightness))
-
-        threading.Timer(interval, _fade, [bulb, interval, step, new_brightness, props, turn_off, retries-1]).start()
 
 
 def _get_max_steps(duration, max_steps_per_minute):
-    return max_steps_per_minute * (1 + int(duration / 60))
+    return int(max_steps_per_minute * (duration / 60))
 
 
 def _get_required_props():
+    #  It's preferrable to get all props in one request
+    #  as bulb can only handle 60 requests per minute
     return ['bright', 'ct', 'rgb', 'flowing', 'power']
 
