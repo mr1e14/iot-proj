@@ -166,7 +166,7 @@ class LightAction:
         if len(self.light_manager.get_all_lights()) == 0:
             return self.__stmt_no_lights()
 
-        if room == 'all' or room == 'everything':
+        if room == 'all' or room == 'everywhere':
             return None
 
         if room is None:
