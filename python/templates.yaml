@@ -30,7 +30,7 @@ fade_started: |
     <prosody rate="slow"> Fading {name} light over {duration}</prosody>
   </speak>
 
-fade_started_card: Fading {name} light over {duration} seconds
+fade_started_card: Fading {name} light over {duration}
 fade_stopped_card: Stopped fading {name} light
 
 no_lights: Sorry. No lights are currently connected.
