@@ -116,7 +116,11 @@ class LightAction:
         if fail_stmt is not None:
             return fail_stmt
 
-        if room is None or room == 'all' or room == 'everywhere':
+        if room is None:
+            self.light_manager.stop_fade()
+            room = self.light_manager.get_default_room().lower()
+            return self.__stmt_fade_stopped(room)
+        if room == 'all' or room == 'everywhere':
             self.light_manager.stop_fade(*self.light_manager.get_all_lights())
             return self.__stmt_fade_stopped(room)
         else:
