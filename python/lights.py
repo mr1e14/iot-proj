@@ -205,5 +205,5 @@ def _get_max_steps(duration, max_steps_per_minute):
 def _get_required_props():
     #  It's preferable to get all props in one request
     #  as bulb can only handle 60 requests per minute
-    return ['bright', 'ct', 'rgb', 'flowing', 'power']
+    return ['bright', 'ct', 'rgb', 'power']
 
