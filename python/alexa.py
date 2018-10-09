@@ -157,7 +157,8 @@ class LightAction:
 
     def __stmt_fade_ok(self, room, duration):
         return statement(render_template('fade_started').format(
-            name=room, duration=duration)).standard_card(*self.__card_fade_ok(room, duration))
+            name=room,
+            duration=get_duration_str(duration))).standard_card(*self.__card_fade_ok(room, get_duration_str(duration)))
 
     def __stmt_fade_stopped(self, room):
         return statement('OK').standard_card(*self.__card_fade_stopped(room))
@@ -180,3 +181,15 @@ class LightAction:
                 return None
             else:
                 return self.__stmt_no_such_light(room)
+
+
+def get_duration_str(duration: int) -> str:
+    if duration < 60:
+        return '{seconds} seconds'.format(seconds=duration)
+
+    if duration % 60 != 0:
+        minutes = int(duration / 60)
+        seconds = duration - (minutes * 60)
+        return '{minutes} minutes and {seconds} seconds'.format(minutes=minutes, seconds=seconds)
+
+    return '{minutes}'.format(minutes=int(duration / 60))
