@@ -36,7 +36,7 @@ class NotificationLevel:
 
 class LightManager:
 
-    def __init__(self, default_room=Room.BEDROOM):
+    def __init__(self, default_room=Room.LOUNGE):
         self.__lights = _initialize_lights()
         self.__default_room = default_room
         self.__default = self.get_light_by_name(default_room)
