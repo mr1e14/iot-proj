@@ -192,4 +192,4 @@ def get_duration_str(duration: int) -> str:
         seconds = duration - (minutes * 60)
         return '{minutes} minutes and {seconds} seconds'.format(minutes=minutes, seconds=seconds)
 
-    return '{minutes}'.format(minutes=int(duration / 60))
+    return '{minutes} minutes'.format(minutes=int(duration / 60))
