@@ -81,8 +81,10 @@ class LightManager:
             bulb.stop_flow()
 
     def set_default(self, name):
+        # TODO default room should be stored in database, not in an instance variable
         light = self.get_light_by_name(name)
         if light is not None:
+            self.__default_room = name
             self.__default = self.get_light_by_name(name)
             logging.info('Set new default light to {}'.format(name))
         else:
