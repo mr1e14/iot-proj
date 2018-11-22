@@ -1,7 +1,7 @@
 from flask import render_template
 from flask_ask import question, statement
-from web_assets import *
-from lights import *
+from .web_assets import *
+from .lights import *
 from isodate import parse_duration
 
 IOT_ENV = {"temp": None, "humidity": None}
@@ -191,9 +191,22 @@ def get_duration_str(duration: int) -> str:
     if duration < 60:
         return '{seconds} seconds'.format(seconds=duration)
 
-    if duration % 60 != 0:
-        minutes = int(duration / 60)
-        seconds = duration - (minutes * 60)
-        return '{minutes} minutes and {seconds} seconds'.format(minutes=minutes, seconds=seconds)
+    minutes = int(duration / 60)
 
-    return '{minutes} minutes'.format(minutes=int(duration / 60))
+    if minutes > 1:
+        minutes_plural = 's'
+    else:
+        minutes_plural = ''
+
+    if duration % 60 != 0:
+        seconds = duration - (minutes * 60)
+
+        if seconds > 1:
+            seconds_plural = 's'
+        else:
+            seconds_plural = ''
+
+        return '{minutes} minute{m_plural} and {seconds} second{s_plural}'.format(
+            minutes=minutes, m_plural=minutes_plural, seconds=seconds, s_plural=seconds_plural)
+
+    return '{minutes} minute{m_plural}'.format(minutes=minutes, m_plural=minutes_plural)
