@@ -1,7 +1,7 @@
 from flask import render_template
 from flask_ask import question, statement
-from .web_assets import *
-from .lights import *
+from web_assets import *
+from lights import *
 from isodate import parse_duration
 
 IOT_ENV = {"temp": None, "humidity": None}
