@@ -143,11 +143,6 @@ def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_dela
         
         # if another request was made, abort task 
         try:
-            #  bulb brightness is clamped (1,99) 
-            if round(brightness) <= 1:
-                brightness = 1
-                props['bright'] = 1
-            
             current_bulb_props = bulb.get_properties(_get_required_props())
             current = [str(x) for x in current_bulb_props.values()]
             previous = [str(x) for x in props.values()] 
@@ -176,10 +171,10 @@ def _fade(bulb, interval, step, brightness, props, turn_off, retries, retry_dela
                 bulb.turn_off()
             return
 
-        new_brightness = brightness - step
+        new_brightness = max(1, brightness - step)
         updated_brightness = False
         try:
-            bulb.set_brightness(round(new_brightness))
+            bulb.set_brightness(new_brightness)
             updated_brightness = True
             props['bright'] = str(round(new_brightness))
             
