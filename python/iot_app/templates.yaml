@@ -19,7 +19,7 @@ humidity:
 
 disco_lights: |
   <speak>
-    <prosody pitch="high"> Starting disco. Have fun!</prosody>
+    Starting disco. Have fun!
   </speak>
 
 disco_lights_card: Started disco lights
@@ -27,7 +27,7 @@ disco_lights_stopped_card: Stopped disco lights
 
 fade_started: |
   <speak>
-    <prosody rate="slow"> Fading {name} light over {duration}</prosody>
+    Fading {name} light over {duration}
   </speak>
 
 fade_started_card: Fading {name} light over {duration}
