@@ -1,5 +1,10 @@
 .idea/
+
 venv/
 instance/
 logs/
 __pycache__/
+*.pyc
+
+.coverage
+coverage/

@@ -1,0 +1,39 @@
+welcome: |
+  <speak>
+    <p> Raspberry Pi. </p>
+    <p> At your service </p>
+  </speak>
+
+card_title_pi: Raspberry Pi
+card_title_lights: Lights
+card_title_sensor: Your IoT
+
+temp_and_humidity:
+    Currently, it's {0} degrees, and humidity is at {1}%
+
+temp:
+    Currently, it's {} degrees in your room
+
+humidity:
+    Humidity is at {} per cent right now
+
+disco_lights: |
+  <speak>
+    Starting disco. Have fun!
+  </speak>
+
+disco_lights_card: Started disco lights
+disco_lights_stopped_card: Stopped disco lights
+
+fade_started: |
+  <speak>
+    Fading {name} light over {duration}
+  </speak>
+
+fade_started_card: Fading {name} light over {duration}
+fade_stopped_card: Stopped fading {name} light
+
+no_lights: Sorry. No lights are currently connected.
+
+no_such_light: I'm afraid the light called {} is not available
+
