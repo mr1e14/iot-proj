@@ -5,8 +5,8 @@ import yaml
 
 lights_module = mock.MagicMock()
 lights_module.LightManager = mock.MagicMock()
-sys.modules['iot_app.lights'] = lights_module
-from iot_app.alexa import LightAction
+sys.modules['iot_app.iot.lights'] = lights_module
+from iot_app.alexa.alexa import LightAction
 
 
 class LightsAlexaTest(TestCase):
@@ -33,7 +33,7 @@ class LightsAlexaTest(TestCase):
                 return light_name
         return None
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_no_lights_found(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -54,7 +54,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'Sorry. No lights are currently connected.' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_no_such_light(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -74,7 +74,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'I\'m afraid the light called porch is not available' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_default_not_available(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -94,7 +94,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'I\'m afraid the light called bedroom is not available' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_default_exists(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -113,7 +113,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Started disco lights' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_custom_room_exists(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -132,7 +132,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Started disco lights' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_start_disco_everywhere(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -151,7 +151,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Started disco lights' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_disco_all_by_default(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -170,7 +170,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'Stopped disco lights' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_disco_custom_room(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -189,7 +189,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'Stopped disco lights' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_disco_no_such_room(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -208,7 +208,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'I\'m afraid the light called porch is not available' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_default_exists(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -228,7 +228,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading bedroom light over 2 minutes' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_custom_room_exists(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -248,7 +248,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading kitchen light over 2 minutes' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_over_seconds(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -268,7 +268,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading bedroom light over 10 seconds' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_over_minutes_and_seconds(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -288,7 +288,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading bedroom light over 1 minute and 20 seconds' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_over_minutes_and_seconds(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -308,7 +308,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading bedroom light over 1 minute and 20 seconds' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_fade_and_turn_off(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -328,7 +328,7 @@ class LightsAlexaTest(TestCase):
         assert 'SSML' == text_type
         assert 'Fading bedroom light over 2 minutes and 30 seconds' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_fade_default_room(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -347,7 +347,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'Stopped fading bedroom light' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_fade_custom_room(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect
@@ -366,7 +366,7 @@ class LightsAlexaTest(TestCase):
         assert 'PlainText' == text_type
         assert 'Stopped fading kitchen light' == card_text
 
-    @mock.patch('iot_app.alexa.render_template')
+    @mock.patch('iot_app.alexa.alexa.render_template')
     def test_stop_fade_no_such_room(self, mock_render):
         # Setup
         mock_render.side_effect = self.render_effect

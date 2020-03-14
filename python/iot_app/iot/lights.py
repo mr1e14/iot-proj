@@ -1,13 +1,13 @@
 from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 import threading
-import logging
 from os.path import join, dirname
+import os
 from collections import Counter
 
+from iot_app.logger.logger import get_logger
 
-logs_dir = join(dirname(__file__), 'logs')
-logging.basicConfig(filename=join(logs_dir, 'lights.log'), format='%(asctime)s %(message)s', level=logging.INFO)
+logging = get_logger(__name__)
 
 
 def _initialize_lights():

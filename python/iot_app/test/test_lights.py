@@ -3,7 +3,7 @@ import sys, time
 
 win32api_module = mock.MagicMock()
 sys.modules['win32api'] = win32api_module
-import iot_app.lights as lights
+import iot_app.iot.lights as lights
 from yeelight.transitions import RGBTransition
 
 
@@ -42,7 +42,7 @@ def _initialize_lights():
 class LightsTest(TestCase):
 
     def setUp(self):
-        with mock.patch('iot_app.lights._initialize_lights', _initialize_lights):
+        with mock.patch('iot_app.iot.lights._initialize_lights', _initialize_lights):
             self.light_manager = lights.LightManager()
             self.default_bulb = self.light_manager.get_light_by_name(self.light_manager.get_default_room())
 

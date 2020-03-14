@@ -1,16 +1,15 @@
-import logging
 from os.path import dirname, join, abspath
 from flask import Flask, request
 from flask_ask import Ask
-from alexa import  welcome, climate_info, start_disco, stop_flow, start_fade, stop_fade
-from alexa import IOT_ENV # temporary solution
+#from iot_app.alexa.alexa import  welcome, climate_info, start_disco, stop_flow, start_fade, stop_fade
+from iot_app.alexa.alexa import IOT_ENV # temporary solution
+from iot_app.assets.web_assets import pi_img
+from iot_app.logger.logger import get_logger
 
-app_dir = dirname(__file__)
-logs_dir = join(app_dir, 'logs')
-
+logging = get_logger(__name__)
 
 app = Flask(__name__, instance_relative_config=True)
-app.config.from_pyfile(abspath(join(app_dir, 'instance/config.py')))
+app.config.from_object('iot_app.config.DevConfig')
 ask = Ask(app, '/alexa')
 
 
@@ -53,6 +52,8 @@ def register_client():
 
 @app.route('/read', methods=['GET'])
 def read_environment():
+    logging.debug("debug msg")
+    logging.info("info msg")
     key = request.args.get('key')
     if key is not None:
         try:
@@ -65,6 +66,9 @@ def read_environment():
 @app.route('/iot', methods=['POST'])
 def iot_handler():
     token = request.form.get('token')
+    print("request intercepted")
+    print("TOKEN = " + token)
+    print("APP TOKEN = " + app.config['POST_TOKEN'])
 
     if token != app.config['POST_TOKEN']:
         return '403', 403
@@ -90,5 +94,5 @@ def homepage():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=5000)
 
