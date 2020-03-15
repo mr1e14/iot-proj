@@ -5,11 +5,14 @@ from flask_ask import Ask
 from iot_app.alexa.alexa import IOT_ENV # temporary solution
 from iot_app.assets.web_assets import pi_img
 from iot_app.logger.logger import get_logger
+from iot_app.iot import sensor_readings
 
 logging = get_logger(__name__)
 
 app = Flask(__name__, instance_relative_config=True)
-app.config.from_object('iot_app.config.DevConfig')
+app.config.from_object('iot_app.instance.config.DevConfig')
+app.register_blueprint(sensor_readings)
+
 ask = Ask(app, '/alexa')
 
 
@@ -48,46 +51,7 @@ def register_client():
     if request.form.get("id") in app.config['CLIENTS']:
         return app.config['POST_TOKEN']
     return '403', 403
-
-
-@app.route('/read', methods=['GET'])
-def read_environment():
-    logging.debug("debug msg")
-    logging.info("info msg")
-    key = request.args.get('key')
-    if key is not None:
-        try:
-            return str(IOT_ENV[key])
-        except KeyError:
-            return 'invalid_key'
-    return str(IOT_ENV)
-
-
-@app.route('/iot', methods=['POST'])
-def iot_handler():
-    token = request.form.get('token')
-    print("request intercepted")
-    print("TOKEN = " + token)
-    print("APP TOKEN = " + app.config['POST_TOKEN'])
-
-    if token != app.config['POST_TOKEN']:
-        return '403', 403
-
-    temp = request.form.get('temp')
-    humidity = request.form.get('humidity')
-
-    if temp is not None:
-        IOT_ENV['temp'] = temp
-
-    if humidity is not None:
-        IOT_ENV['humidity'] = humidity
-
-    if temp is humidity is None:
-        return 'invalid_message'
-
-    return "200"
-
-
+    
 @app.route('/')
 def homepage():
     return '200'
