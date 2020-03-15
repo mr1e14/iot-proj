@@ -45,12 +45,6 @@ def fade_lights(room, duration, off):
 def stop_fade_lights(room):
     return stop_fade(room)
 
-
-@app.route('/register', methods=['POST'])
-def register_client():
-    if request.form.get("id") in app.config['CLIENTS']:
-        return app.config['POST_TOKEN']
-    return '403', 403
     
 @app.route('/')
 def homepage():
