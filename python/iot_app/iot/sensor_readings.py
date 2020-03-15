@@ -19,7 +19,7 @@ def handle_readings():
     logging.debug(f"/iot: {json_data}")
     
     api_key = json_data.get('API_KEY')
-    if api_key != app.config['POST_TOKEN']:
+    if api_key != app.config['SENSORS_API_KEY']:
         raise SensorReadingException('Invalid API key', 401)
 
     temp = json_data.get('temp')
