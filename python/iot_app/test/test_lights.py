@@ -21,6 +21,9 @@ class MockBulb:
             props[key] = self.props[key]
         return props
 
+    def get_prop(self, prop: str) -> str:
+        return self.get_properties([prop]).get(prop)
+
     def start_flow(self, flow):
         self.flow_called_with = flow
         self.start_flow_count += 1
@@ -216,48 +219,6 @@ class LightsTest(TestCase):
 
         # Verify
         assert 'LOUNGE' == self.light_manager.get_default_room()
-
-    def test_fade_on_defaults(self):
-        # Setup
-        self.default_bulb.set_brightness(100)
-        fade_duration = 3
-
-        # Exercise
-        self.light_manager.fade(fade_duration)
-        time.sleep(fade_duration + 0.1)
-
-        # Verify
-        assert self.default_bulb.get_properties(['power'])['power'] == 'on'
-        assert self.default_bulb.get_properties(['bright'])['bright'] == 1
-
-    def test_fade_and_turn_off(self):
-        # Setup
-        self.default_bulb.set_brightness(41)
-        fade_duration = 3
-
-        # Exercise
-        self.light_manager.fade(duration=fade_duration, turn_off=True)
-        time.sleep(fade_duration + 0.1)
-
-        # Verify
-        assert self.default_bulb.get_properties(['power'])['power'] == 'off'
-        assert self.default_bulb.get_properties(['bright'])['bright'] == 1
-
-    def test_fade_interrupted(self):
-        # Setup
-        self.default_bulb.set_brightness(100)
-        fade_duration = 4
-        new_requested_brightness = 60
-
-        # Exercise
-        self.light_manager.fade(duration=fade_duration, turn_off=True)
-        time.sleep(2.1)
-        self.default_bulb.set_brightness(new_requested_brightness)
-        time.sleep(2)
-
-        # Verify
-        assert self.default_bulb.get_properties(['power'])['power'] == 'on'
-        assert self.default_bulb.get_properties(['bright'])['bright'] == 60
 
     if __name__ == '__main__':
         main()

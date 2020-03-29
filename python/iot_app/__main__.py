@@ -35,16 +35,6 @@ def disco_lights(room):
 def stop_lights(room):
     return stop_flow(room)
 
-
-@ask.intent('FadeIntent', mapping={'room': 'Room', 'duration': 'Duration', 'off': 'Off'})
-def fade_lights(room, duration, off):
-    return start_fade(room, duration, off)
-
-
-@ask.intent('StopFadeIntent', mapping={'room': 'Room'})
-def stop_fade_lights(room):
-    return stop_fade(room)
-
     
 @app.route('/')
 def homepage():
