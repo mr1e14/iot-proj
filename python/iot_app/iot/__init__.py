@@ -1,1 +1,1 @@
-from .sensor_readings import sensor_readings
+from .sensor_readings import TemperatureResource, HumidityResource

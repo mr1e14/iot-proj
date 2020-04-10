@@ -1,19 +1,21 @@
 from os.path import dirname, join, abspath
 from flask import Flask, request
+from flask_restful import Api
 from flask_ask import Ask
 #from iot_app.alexa.alexa import  welcome, climate_info, start_disco, stop_flow, start_fade, stop_fade
 from iot_app.alexa.alexa import IOT_ENV # temporary solution
 from iot_app.assets.web_assets import pi_img
 from iot_app.logger.logger import get_logger
-from iot_app.iot import sensor_readings
+from iot_app.iot import TemperatureResource, HumidityResource
 
 logging = get_logger(__name__)
 
-app = Flask(__name__, instance_relative_config=True)
-app.config.from_object('iot_app.instance.config.DevConfig')
-app.register_blueprint(sensor_readings)
-
+app = Flask(__name__)
 ask = Ask(app, '/alexa')
+api = Api(app)
+
+api.add_resource(TemperatureResource, '/iot/temperature')
+api.add_resource(HumidityResource, '/iot/humidity')
 
 
 @ask.launch
