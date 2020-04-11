@@ -1,4 +1,4 @@
-from iot_app.db import db
+from iot_app.db import db, handle_mongo_error
 from iot_app.logger import get_logger
 from pymongo.errors import ConnectionFailure
 
@@ -8,15 +8,6 @@ logging = get_logger(__name__)
 temperature = db['temp_sensor']
 """ Collection of humidity sensor readings """
 humidity = db['humidity_sensor']
-
-def handle_mongo_error(func):
-    def error_wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ConnectionFailure as err:
-            logging.error(err)
-            raise err
-    return error_wrapper
 
 
 @handle_mongo_error
