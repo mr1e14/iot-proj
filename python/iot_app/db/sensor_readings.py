@@ -4,7 +4,7 @@ from pymongo.errors import ConnectionFailure
 
 logging = get_logger(__name__)
 
-""" Collection object where temperature readings are stored sort:{$natural:-1}"""
+""" Collection object where temperature readings are stored"""
 temperature = db['temp_sensor']
 """ Collection of humidity sensor readings """
 humidity = db['humidity_sensor']
