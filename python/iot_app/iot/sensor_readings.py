@@ -2,7 +2,6 @@ from iot_app.logger.logger import get_logger
 from iot_app.config import config
 from iot_app.db.sensor_readings import save_temp, get_last_temp, save_humidity, get_last_humidity
 
-from typing import Dict
 from functools import wraps
 from flask import request, jsonify
 from flask_restful import Resource, reqparse, fields, abort
