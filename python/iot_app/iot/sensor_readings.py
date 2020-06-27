@@ -1,25 +1,13 @@
 from iot_app.logger.logger import get_logger
 from iot_app.config import config
 from iot_app.db.sensor_readings import save_temp, get_last_temp, save_humidity, get_last_humidity
+from iot_app.iot import make_api_key_validator, response_success, response_error
 
-from functools import wraps
-from flask import request, jsonify
-from flask_restful import Resource, reqparse, fields, abort
+from flask_restful import Resource, reqparse, fields
 from bson.objectid import ObjectId
-
-import hmac
 
 logging = get_logger(__name__)
 
-
-def _response_success(data={}):
-    return jsonify({
-        'success': True,
-        'data': data
-    })
-
-def _response_error(error_code=500, message='Server encountered error processing the request'):
-    abort(error_code, message=message, success=False)
 
 class ReadingType:
     TEMPERATURE = 'temp'
@@ -43,21 +31,7 @@ class SensorReadingResource(Resource):
             'timestamp': timestamp
         }
 
-    def __validate_api_key(func):
-        """
-        Validates API key used to make calls to SensorReading resources
-        """
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            api_key = request.headers.get('API_KEY')
-            if api_key is None:
-                _response_error(error_code=401, message='Missing API key')
-            if not hmac.compare_digest(config['SENSORS_API_KEY'], api_key):
-                _response_error(error_code=401, message='Invalid API key')
-            return func(*args, **kwargs)
-        return wrapper
-
-    method_decorators = [__validate_api_key]
+    method_decorators = [make_api_key_validator(config['SENSORS_API_KEY'])]
 
 
 class TemperatureResource(SensorReadingResource):
@@ -71,20 +45,20 @@ class TemperatureResource(SensorReadingResource):
         logging.debug('GET /temperature')
         try:
             db_result = get_last_temp()
-            return _response_success(self.__transform_for_temperature(db_result))
+            return response_success(self.__transform_for_temperature(db_result))
         except Exception as err:
             logging.error(err)
-            return _response_error()
+            return response_error()
 
     def put(self):
         request_args = self.__temp_put_parser.parse_args()
         logging.debug(f'PUT /temperature with args: {request_args}')
         try:
             save_temp(request_args['temp'])
-            return _response_success()
+            return response_success()
         except Exception as err:
             logging.error(err)
-            return _response_error()
+            return response_error()
 
 class HumidityResource(SensorReadingResource):
     __humidity_put_parser = reqparse.RequestParser()
@@ -102,19 +76,19 @@ class HumidityResource(SensorReadingResource):
         logging.debug('GET /humidity')
         try:
             db_result = get_last_humidity()
-            return _response_success(self.__transform_for_humidity(db_result))
+            return response_success(self.__transform_for_humidity(db_result))
         except Exception as err:
             logging.error(err)
-            return _response_error()
+            return response_error()
 
     def put(self):
         request_args = self.__humidity_put_parser.parse_args()
         logging.debug(f'PUT /humidity with args: {request_args}')
         if not self.__is_valid_humidity(request_args['humidity']):
-            return _response_error(400, 'Humidity must be expressed as a percentage i.e. 0 <= x <= 1')
+            return response_error(400, 'Humidity must be expressed as a percentage i.e. 0 <= x <= 1')
         try:
             save_humidity(request_args['humidity'])
-            return _response_success()
+            return response_success()
         except Exception as err:
             logging.error(err)
-            return _response_error()
+            return response_error()

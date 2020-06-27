@@ -1,6 +1,5 @@
 from iot_app.db import db, handle_mongo_error
 from iot_app.logger import get_logger
-from pymongo.errors import ConnectionFailure
 
 logging = get_logger(__name__)
 
