@@ -3,10 +3,9 @@ from flask import Flask, request
 from flask_restful import Api
 from flask_ask import Ask
 #from iot_app.alexa.alexa import  welcome, climate_info, start_disco, stop_flow, start_fade, stop_fade
-from iot_app.alexa.alexa import IOT_ENV # temporary solution
 from iot_app.assets.web_assets import pi_img
 from iot_app.logger.logger import get_logger
-from iot_app.iot import TemperatureResource, HumidityResource
+from iot_app.iot import TemperatureResource, HumidityResource, LightResource
 
 logging = get_logger(__name__)
 
@@ -16,7 +15,7 @@ api = Api(app)
 
 api.add_resource(TemperatureResource, '/iot/temperature')
 api.add_resource(HumidityResource, '/iot/humidity')
-
+api.add_resource(LightResource, '/iot/light/<string:_id>')
 
 @ask.launch
 def launch():
