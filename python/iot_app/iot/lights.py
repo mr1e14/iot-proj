@@ -6,8 +6,12 @@ from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 from webcolors import hex_to_rgb, rgb_to_hex, normalize_hex
 
+from concurrent.futures.thread import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
+import threading
+
+import time
 
 logging = get_logger(__name__)
 
@@ -52,23 +56,29 @@ class Color:
 
 class Light(Bulb):
 
-    def __init__(self, ip, _id, name, is_default):
+    db_props = ('name', 'is_default', 'ip')
+    bulb_props = ('on', 'brightness', 'color', 'is_flowing')
+
+    def __init__(self, ip, _id, name, is_default, is_connected):
         super().__init__(ip)
         self.__id = _id
         self.__name = name
         self.__is_default = is_default
+        self.__is_connected = is_connected
         self.__last_refresh = None
+        self.__lock = threading.Lock()
 
 
     def refresh_props(self):
-        logging.debug(f'Refreshing props of light, IP: {self.ip}')
-        props = self.get_properties()
-        self.__brightness = int(props['bright'])
-        self.__on = props['power'] == 'on'
-        rgb_int = int(props['rgb'])
-        self.__color = Color.from_rgb_int(rgb_int)
-        self.__is_flowing = props['flowing'] == 'flowing'
-        self.__last_refresh = datetime.now()
+        with self.__lock:
+            logging.debug(f'Refreshing props of light, IP: {self.ip}')
+            props = self.get_properties()
+            self.__brightness = int(props['bright'])
+            self.__on = props['power'] == 'on'
+            rgb_int = int(props['rgb'])
+            self.__color = Color.from_rgb_int(rgb_int)
+            self.__is_flowing = props['flowing'] == 'flowing'
+            self.__last_refresh = datetime.now()
 
     def get_prop(self, prop: str) -> str:
         return self.get_properties([prop]).get(prop)
@@ -104,6 +114,10 @@ class Light(Bulb):
     @property
     def id(self):
         return self.__id
+
+    @property
+    def is_connected(self):
+        return self.__is_connected
     
     @property
     def name(self):
@@ -132,7 +146,7 @@ class Light(Bulb):
 
     @brightness.setter
     def brightness(self, new_brightness):
-        if not 1 < new_brightness < 100: 
+        if not 1 <= new_brightness <= 100:
             raise ValueError('Brightness must be between 1 and 100')
         self.set_brightness(new_brightness)
         self.__brightness = new_brightness
@@ -183,19 +197,30 @@ class Light(Bulb):
         difference = datetime.now() - self.__last_refresh
         return abs(difference / timedelta(seconds=1))
 
+    def __setattr__(self, name, value):
+        if hasattr(self, '__lock'):
+            with self.__lock:
+                try:
+                    super(Light, self).__setattr__(name, value)
+                except BulbException as err:
+                    # bulb no longer online
+                    logging.error(err)
+                    self.__is_connected = False
+                    raise err
+
+        super(Light, self).__setattr__(name, value)
+
 
 def _create_light(db_data: Dict, is_connected: bool) -> Light:
     logging.info(f'Creating light with IP: {db_data["ip"]}')
-    light = Light(**db_data)
+    light = Light(**db_data, is_connected)
 
     if is_connected:
         light.refresh_props()
-        
-    light.is_connected = is_connected
     return light
 
 
-def _initialize_lights() -> List[Light]:
+def _discover_lights() -> List[Light]:
     logging.info('Initializing lights')
 
     db_lights = get_lights()
@@ -217,10 +242,14 @@ def _initialize_lights() -> List[Light]:
     logging.debug(f'Found {len(ips)} lights currently turned on')
 
     lights = []
-    for db_light in db_lights:
-        light_obj = _create_light(db_light, db_light['ip'] in ips)
-        lights.append(light_obj)
 
+    with ThreadPoolExecutor() as executor:
+        for db_light in db_lights:
+            executor.submit(
+                _create_light, db_light, db_light['ip'] in ips
+                ).add_done_callback(
+                    lambda future: lights.append(future.result())
+                )
     return lights
 
 class NotificationLevel:
@@ -236,7 +265,7 @@ class LightManager:
 
     def __init__(self):
         if LightManager.__instance is None:
-            self.__lights = _initialize_lights()
+            self.__do_lights_discovery()
             LightManager.__instance = self
 
     def instance():
@@ -244,6 +273,9 @@ class LightManager:
             LightManager()
         return LightManager.__instance
 
+    def __do_lights_discovery(self) -> List[Light]:
+        self.__lights = _discover_lights()
+        threading.Timer(15, self.__do_lights_discovery).start()
 
     def get_light_by_name(self, name):
         for light in self.__lights:
