@@ -34,7 +34,7 @@ class LightResource(Resource):
 
     def get(self, _id):
         lights_by_id = self.get_all_lights()
-        logging.info(f'GET /lights for ID: {_id}')
+        logging.info(f'GET /light for ID: {_id}')
         if _id not in lights_by_id.keys():
             response_error(404, f'No light with ID: {_id}')
         light = lights_by_id[_id]
@@ -45,7 +45,7 @@ class LightResource(Resource):
     def put(self, _id):
         lights_by_id = self.get_all_lights()
         request_args = _exclude_none_values(self.__light_put_parser.parse_args(strict=True))
-        logging.info(f'PUT /lights for ID: {_id}, args: {request_args}')
+        logging.info(f'PUT /light for ID: {_id}, args: {request_args}')
 
         if _id not in lights_by_id.keys():
             response_error(404, f"No light with ID: {_id}")
@@ -61,3 +61,13 @@ class LightResource(Resource):
         except ValueError as err:
             logging.error(err)
             response_error(400, str(err))
+
+class LightsDiscoveryResource(Resource):
+    method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
+
+    light_manager = LightManager.instance()
+
+    def get(self):
+        logging.info('GET /lights')
+        data = [light.dump_props() for light in self.light_manager.get_all_lights()]
+        return response_success(data)

@@ -276,10 +276,6 @@ class LightManager:
             LightManager()
         return LightManager.__instance
 
-    def __do_lights_discovery(self) -> List[Light]:
-        self.__lights = _discover_lights()
-        threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery).start()
-
     def get_light_by_name(self, name):
         for light in self.__lights:
             if light.name == name.upper():

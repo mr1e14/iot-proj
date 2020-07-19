@@ -31,4 +31,4 @@ def make_api_key_validator(api_key):
     return validate_api_key
 
 from .sensor_readings import TemperatureResource, HumidityResource
-from .lights_api import LightResource
+from .lights_api import LightResource, LightsDiscoveryResource
