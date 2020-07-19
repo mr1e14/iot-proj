@@ -1,5 +1,6 @@
 from iot_app.logger import get_logger
 from iot_app.db.lights import save_light, save_new_light, get_lights, get_one_light
+from iot_app.config import config
 
 from typing import List, Dict
 from yeelight import Bulb, Flow, discover_bulbs, BulbException
@@ -14,6 +15,8 @@ import threading
 import time
 
 logging = get_logger(__name__)
+
+_lights_config = config['lights']
 
 class Color:
 
@@ -125,7 +128,7 @@ class Light(Bulb):
     
     @name.setter
     def name(self, new_name):
-        max_light_length = 32
+        max_light_length = _lights_config['max_light_length']
         if len(new_name) > max_light_length:
             raise ValueError(f'Light name may have a maximum of {max_light_length} characters')
         self.__name = new_name
@@ -275,7 +278,7 @@ class LightManager:
 
     def __do_lights_discovery(self) -> List[Light]:
         self.__lights = _discover_lights()
-        threading.Timer(15, self.__do_lights_discovery).start()
+        threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery).start()
 
     def get_light_by_name(self, name):
         for light in self.__lights:
@@ -302,7 +305,7 @@ class LightManager:
         logging.info(f'Flashing notification ({level})')
 
         red, green, blue = level
-        flow = Flow(count=3, transitions=pulse(red, green, blue, duration=400))
+        flow = Flow(count=3, transitions=pulse(red, green, blue, duration=_lights_config['notify_duration']))
 
         if len(bulbs) == 0:
             bulbs = [self.default_light]
