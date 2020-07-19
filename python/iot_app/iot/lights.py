@@ -325,8 +325,8 @@ class LightManager:
     def get_all_lights(self) -> List[Light]:
         return self.__lights
 
-
-        
-
-        
-
+    def __do_lights_discovery(self) -> List[Light]:
+        self.__lights = _discover_lights()
+        thread = threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery)
+        thread.daemon = True
+        thread.start()
