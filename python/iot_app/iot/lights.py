@@ -86,7 +86,7 @@ class Light(Bulb):
     def get_prop(self, prop: str) -> str:
         return self.get_properties([prop]).get(prop)
 
-    def dump_props(self) -> dict:
+    def dump_props(self) -> Dict:
         props = {
             'id': str(self.id),
             'ip': self.ip,
