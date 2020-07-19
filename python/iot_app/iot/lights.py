@@ -216,7 +216,7 @@ class Light(Bulb):
 
 def _create_light(db_data: Dict, is_connected: bool) -> Light:
     logging.info(f'Creating light with IP: {db_data["ip"]}')
-    light = Light(**db_data, is_connected)
+    light = Light(**db_data, is_connected=is_connected)
 
     if is_connected:
         light.refresh_props()
