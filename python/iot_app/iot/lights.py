@@ -68,7 +68,6 @@ class Light(Bulb):
         self.__name = name
         self.__is_default = is_default
         self.__is_connected = is_connected
-        self.__last_refresh = None
         self.__lock = threading.Lock()
 
 
@@ -81,7 +80,6 @@ class Light(Bulb):
             rgb_int = int(props['rgb'])
             self.__color = Color.from_rgb_int(rgb_int)
             self.__is_flowing = props['flowing'] == 'flowing'
-            self.__last_refresh = datetime.now()
 
     def get_prop(self, prop: str) -> str:
         return self.get_properties([prop]).get(prop)
@@ -193,12 +191,6 @@ class Light(Bulb):
     @property
     def is_flowing(self):
         return self.__is_flowing
-
-    def last_refresh_in_seconds(self):
-        if self.__last_refresh is None:
-            return None
-        difference = datetime.now() - self.__last_refresh
-        return abs(difference / timedelta(seconds=1))
 
     def __setattr__(self, name, value):
         if hasattr(self, '__lock'):
