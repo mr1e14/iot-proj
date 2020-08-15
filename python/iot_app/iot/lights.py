@@ -1,5 +1,5 @@
 from iot_app.logger import get_logger
-from iot_app.db.lights import save_light, save_new_light, get_lights, get_one_light
+import iot_app.db.lights as db
 from iot_app.config import config
 
 from typing import List, Dict, Tuple
@@ -183,7 +183,7 @@ class Light():
         """
         Saves database properties of a light
         """
-        save_light({'ip': self.ip,
+        db.save_light({'ip': self.ip,
             'name': self.name,
             'is_default': self.is_default},
             _id=self.id
@@ -373,10 +373,10 @@ class LightManager:
         Saves bulbs that are not yet in the database
         :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently connected on the network
         """
-        db_lights = get_lights()
+        db_lights = db.get_lights()
         for bulb in bulb_info:
             if bulb['ip'] not in db_lights.distinct('ip'):
-                save_new_light({
+                db.save_new_light({
                     'ip': bulb['ip'],
                     'name': bulb['capabilities']['name'],
                     'is_default': False
@@ -441,7 +441,7 @@ class LightManager:
         connected_bulbs = discover_bulbs()
         LightManager.__save_new_lights(connected_bulbs)
 
-        db_lights = get_lights()
+        db_lights = db.get_lights()
         logging.debug(f'Found {db_lights.count()} lights in database')
 
         with ThreadPoolExecutor() as executor:
