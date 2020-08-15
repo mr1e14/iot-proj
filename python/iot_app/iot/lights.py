@@ -2,7 +2,7 @@ from iot_app.logger import get_logger
 from iot_app.db.lights import save_light, save_new_light, get_lights, get_one_light
 from iot_app.config import config
 
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 from webcolors import hex_to_rgb, rgb_to_hex, normalize_hex
@@ -56,35 +56,111 @@ class Color:
     def hex(self):
         return rgb_to_hex(self.rgb_tuple)
 
+class LightEffect:
 
-class Light(Bulb):
+    def __init__(self):
+        pass
+
+    def get_flow(self) -> Flow:
+        raise NotImplementedError
+
+class DiscoEffect(LightEffect):
+
+    def __init__(self, count=0):
+        super().__init__()
+        self.__count = count
+
+    def get_flow(self):
+        return Flow(count=self.__count, transitions=disco())
+
+class StrobeEffect(LightEffect):
+
+    def __init__(self, count=0):
+        super().__init__()
+        self.__count = count
+
+    def get_flow(self):
+        return Flow(count=self.__count, transitions=strobe())
+
+class LSDEffect(LightEffect):
+
+    def __init__(self, duration=1000, count=0):
+        super().__init__()
+        self.__duration = duration
+        self.__count = count
+
+    def get_flow(self):
+        return Flow(count=self.__count, transitions=lsd(duration=self.__duration))
+
+class PoliceEffect(LightEffect):
+
+    def __init__(self, count=0, duration=300):
+        super().__init__()
+        self.__count = count
+        self.__duration = duration
+
+    def get_flow(self):
+        return Flow(count=self.__count, transitions=police(duration=self.__duration))
+
+class RandomLoopEffect(LightEffect):
+
+    def __init__(self, count=0, duration=500):
+        super().__init__()
+        self.__count = count
+        self.__duration = duration
+
+    def get_flow(self):
+        return Flow(count=self.__count, transitions=randomloop(duration=self.__duration))
+
+
+
+class Light():
 
     db_props = ('name', 'is_default', 'ip')
     bulb_props = ('on', 'brightness', 'color', 'is_flowing')
+    effects_map = {
+        'disco': DiscoEffect,
+        'lsd': LSDEffect,
+        'police': PoliceEffect,
+        'strobe': StrobeEffect,
+        'random': RandomLoopEffect
+        }
 
     def __init__(self, ip, _id, name, is_default, is_connected):
-        super().__init__(ip)
+        self.__bulb = Bulb(ip)
         self.__id = _id
         self.__name = name
         self.__is_default = is_default
         self.__is_connected = is_connected
-        self.__lock = threading.Lock()
+        self.__effect = None
+        self.__effect_props = {}
+        self.__lock = threading.RLock()
 
 
     def refresh_props(self):
+        """
+        Makes a direct call on the smart bulb to update properties visible via APIs
+        """
         with self.__lock:
             logging.debug(f'Refreshing props of light, IP: {self.ip}')
-            props = self.get_properties()
-            self.__brightness = int(props['bright'])
-            self.__on = props['power'] == 'on'
-            rgb_int = int(props['rgb'])
-            self.__color = Color.from_rgb_int(rgb_int)
-            self.__is_flowing = props['flowing'] == 'flowing'
+            try:
+                props = self.__bulb.get_properties()
+                self.__is_connected = True
+                self.__brightness = int(props['bright'])
+                self.__on = props['power'] == 'on'
+                rgb_int = int(props['rgb'])
+                self.__color = Color.from_rgb_int(rgb_int)
+                self.__is_flowing = props['flowing'] == '1'
+            except BulbException as err:
+                self.__implied_disconnected()
 
     def get_prop(self, prop: str) -> str:
-        return self.get_properties([prop]).get(prop)
+        return self.__bulb.get_properties([prop]).get(prop)
 
     def dump_props(self) -> Dict:
+        """
+        Create a dictionary of light props. Bulb props included only if light is connected
+        """
         props = {
             'id': str(self.id),
             'ip': self.ip,
@@ -97,11 +173,16 @@ class Light(Bulb):
                 'brightness': self.brightness,
                 'on': self.on,
                 'color': self.color.hex,
-                'is_flowing': self.is_flowing
+                'is_flowing': self.__is_flowing,
+                'effect': self.__effect,
+                'effect_props': self.__effect_props
             }
         return props
 
     def __save(self):
+        """
+        Saves database properties of a light
+        """
         save_light({'ip': self.ip,
             'name': self.name,
             'is_default': self.is_default},
@@ -110,7 +191,7 @@ class Light(Bulb):
 
     @property
     def ip(self):
-        return self._ip
+        return self.__bulb._ip
 
     @property
     def id(self):
@@ -125,7 +206,11 @@ class Light(Bulb):
         return self.__name
     
     @name.setter
-    def name(self, new_name):
+    def name(self, new_name: str):
+        """
+        Sets light name, which is then saved in the database
+        :param new_name: new light name
+        """
         max_light_length = _lights_config['max_light_length']
         if len(new_name) > max_light_length:
             raise ValueError(f'Light name may have a maximum of {max_light_length} characters')
@@ -137,7 +222,12 @@ class Light(Bulb):
         return self.__is_default
     
     @is_default.setter
-    def is_default(self, new_is_default):
+    def is_default(self, new_is_default: bool):
+        """
+        A 'default' light is one to which group actions apply.
+        If set to False, it will only change state if called directly.
+        :param new_is_default: whether light is default or not
+        """
         self.__is_default = new_is_default
         self.__save()
 
@@ -146,10 +236,14 @@ class Light(Bulb):
         return self.__brightness
 
     @brightness.setter
-    def brightness(self, new_brightness):
+    def brightness(self, new_brightness: int):
+        """
+        Sets light brightness.
+        :param new_brightness: brightness expressed as a number between 1 and 100.
+        """
         if not 1 <= new_brightness <= 100:
             raise ValueError('Brightness must be between 1 and 100')
-        self.set_brightness(new_brightness)
+        self.__bulb.set_brightness(new_brightness)
         self.__brightness = new_brightness
 
     @property
@@ -172,7 +266,7 @@ class Light(Bulb):
         else:
             color_obj = Color(*new_color)
         
-        self.set_rgb(**color_obj.rgb_dict)
+        self.__bulb.set_rgb(**color_obj.rgb_dict)
         self.__color = color_obj
     
 
@@ -183,27 +277,62 @@ class Light(Bulb):
     @on.setter
     def on(self, new_on: bool):
         if new_on:
-            self.turn_on()
+            self.__bulb.turn_on()
         else:
-            self.turn_off()
+            self.__bulb.turn_off()
+            self.__clear_effect()
         self.__on = new_on
 
-    @property
-    def is_flowing(self):
-        return self.__is_flowing
+
+    def set_effect(self, effect_name: str, effect_props: Dict):
+        """
+        Starts / stops a smart light effect.
+        :param effect_name: effect to be shown. Must be an existing key in 'effects_map' or None, which indicates stop current effect
+        :effect_props: properties as supported by individual effects. If unsupported prop is supplied, effect constructor will throw TypeError
+        """
+        try:
+            if effect_name is None:
+                self.__bulb.stop_flow()
+                self.__clear_effect()
+            else:
+                effect = self.effects_map[effect_name](**effect_props)
+                self.__bulb.start_flow(effect.get_flow())
+                self.__is_flowing = True
+                self.__effect = effect_name
+                self.__effect_props = effect_props
+        except TypeError as err:
+            logging.error(err)
+            raise ValueError('Props supplied to effect are incorrect')
+
+    def __clear_effect(self):
+        """
+        Resets properties to indicate no effect is currently applied on a light
+        """
+        self.__is_flowing = False
+        self.__effect = None
+        self.__effect_props = {}
+
+    def __implied_disconnected(self):
+        """
+        Invoked when behaviour of the light implies it is no longer connected, so was probably turned off
+        Resets properties to the state they must be in if the light is truly turned off
+        """
+        self.__is_connected = False
+        self.__clear_effect()
 
     def __setattr__(self, name, value):
-        if hasattr(self, '__lock'):
+        try:
             with self.__lock:
                 try:
                     super(Light, self).__setattr__(name, value)
                 except BulbException as err:
                     # bulb no longer online
                     logging.error(err)
-                    self.__is_connected = False
+                    self.__implied_disconnected()
                     raise err
-
-        super(Light, self).__setattr__(name, value)
+        except AttributeError:
+            # no lock yet
+            super(Light, self).__setattr__(name, value)
 
 
 def _create_light(db_data: Dict, is_connected: bool) -> Light:
