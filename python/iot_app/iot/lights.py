@@ -127,7 +127,7 @@ class Light():
         }
 
     def __init__(self, ip, _id, name, is_default, is_connected):
-        self.__bulb = Bulb(ip)
+        self.__bulb = Bulb(ip, auto_on=True)
         self.__id = _id
         self.__name = name
         self.__is_default = is_default
