@@ -13,16 +13,16 @@ logging = get_logger(__name__)
 def _exclude_none_values(d: Dict) -> Dict:
     return {k: v for k,v in d.items() if v is not None}
 
+def get_lights_by_id(light_manager: LightManager):
+    lights_by_id = {}
+    for light in light_manager.get_all_lights():
+        lights_by_id[str(light.id)] = light
+    return lights_by_id
+
 class LightResource(Resource):
     method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
 
     light_manager = LightManager.instance()
-
-    def get_all_lights(self):
-        lights_by_id = {}
-        for light in self.light_manager.get_all_lights():
-            lights_by_id[str(light.id)] = light
-        return lights_by_id
 
     __light_put_parser = reqparse.RequestParser()
     __light_put_parser.add_argument('name', type=str)
@@ -33,7 +33,7 @@ class LightResource(Resource):
 
 
     def get(self, _id):
-        lights_by_id = self.get_all_lights()
+        lights_by_id = get_lights_by_id(self.light_manager)
         logging.info(f'GET /light for ID: {_id}')
         if _id not in lights_by_id.keys():
             response_error(404, f'No light with ID: {_id}')
@@ -43,7 +43,7 @@ class LightResource(Resource):
 
 
     def put(self, _id):
-        lights_by_id = self.get_all_lights()
+        lights_by_id = get_lights_by_id(self.light_manager)
         request_args = _exclude_none_values(self.__light_put_parser.parse_args(strict=True))
         logging.info(f'PUT /light for ID: {_id}, args: {request_args}')
 
