@@ -215,38 +215,6 @@ def _create_light(db_data: Dict, is_connected: bool) -> Light:
     return light
 
 
-def _discover_lights() -> List[Light]:
-    logging.info('Initializing lights')
-
-    db_lights = get_lights()
-    logging.debug(f'Found {db_lights.count()} lights in database')
-
-    ips = []
-    for instance in discover_bulbs():
-        ips.append(instance['ip'])
-        if instance['ip'] not in db_lights.distinct('ip'):
-            # save newly discovered light in db
-            save_new_light({
-                'ip': instance['ip'],
-                'name': instance['capabilities']['name'],
-                'is_default': False
-            })
-            # refresh db_lights
-            db_lights = get_lights()
-
-    logging.debug(f'Found {len(ips)} lights currently turned on')
-
-    lights = []
-
-    with ThreadPoolExecutor() as executor:
-        for db_light in db_lights:
-            executor.submit(
-                _create_light, db_light, db_light['ip'] in ips
-                ).add_done_callback(
-                    lambda future: lights.append(future.result())
-                )
-    return lights
-
 class NotificationLevel:
     #    R   G    B
     OK = 0,  255, 100
@@ -260,7 +228,9 @@ class LightManager:
 
     def __init__(self):
         if LightManager.__instance is None:
+            self.__lights = []
             self.__do_lights_discovery()
+            self.__do_refresh_light_props()
             LightManager.__instance = self
 
     def instance():
@@ -268,9 +238,30 @@ class LightManager:
             LightManager()
         return LightManager.__instance
 
+
+    def __save_new_lights(bulb_info: List[Dict]):
+        """
+        Saves bulbs that are not yet in the database
+        :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently connected on the network
+        """
+        db_lights = get_lights()
+        for bulb in bulb_info:
+            if bulb['ip'] not in db_lights.distinct('ip'):
+                save_new_light({
+                    'ip': bulb['ip'],
+                    'name': bulb['capabilities']['name'],
+                    'is_default': False
+                })
+
     def get_light_by_name(self, name):
         for light in self.__lights:
             if light.name == name.upper():
+                return light
+        return None
+
+    def __get_light_by_ip(self, ip):
+        for light in self.__lights:
+            if light.ip == ip:
                 return light
         return None
 
@@ -313,8 +304,38 @@ class LightManager:
     def get_all_lights(self) -> List[Light]:
         return self.__lights
 
-    def __do_lights_discovery(self) -> List[Light]:
-        self.__lights = _discover_lights()
+    def __do_lights_discovery(self):
+        """
+        Scans the network for smart bulbs and records them in the database.
+        Also, creates Light objects of known lights (both connected and disconnected)
+        """
+        connected_bulbs = discover_bulbs()
+        LightManager.__save_new_lights(connected_bulbs)
+
+        db_lights = get_lights()
+        logging.debug(f'Found {db_lights.count()} lights in database')
+
+        with ThreadPoolExecutor() as executor:
+            for db_light in db_lights:
+                if self.__get_light_by_ip(db_light['ip']) is None:
+                    executor.submit(
+                        _create_light, db_light, db_light['ip'] in [bulb['ip'] for bulb in connected_bulbs]
+                        ).add_done_callback(
+                            lambda future: self.__lights.append(future.result())
+                            )
         thread = threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery)
         thread.daemon = True
         thread.start()
+
+    def __do_refresh_light_props(self):
+        """
+        Periodically, refreshes properties of lights.
+        The requirement comes from that clients are not allowed to call 'get_properties' directly on a Bulb, which is
+        the only way to know the true, current state, but there's a limit on direct bulb API calls per minute
+        """
+        for light in self.__lights:
+            light.refresh_props()
+        thread = threading.Timer(_lights_config['refresh_interval'], self.__do_refresh_light_props)
+        thread.daemon = True
+        thread.start()
+        
