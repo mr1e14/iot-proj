@@ -2,9 +2,8 @@ from flask import render_template
 from flask_ask import question, statement
 from iot_app.assets.web_assets import *
 from iot_app.iot.lights import *
+from iot_app.iot.sensor_readings import get_last_temp, get_last_humidity
 from isodate import parse_duration
-
-IOT_ENV = {"temp": None, "humidity": None}
 
 
 def welcome():
@@ -12,25 +11,22 @@ def welcome():
     question_text = render_template('welcome')
     return question(question_text).standard_card(card_title, question_text, pi_img)
 
+class SensorType:
+    HUMIDITY = 'humidity'
+    TEMPERATURE = 'temperature'
 
-def climate_info(prop, warmth):
+def sensor_readings(sensor):
     card_title = render_template('card_title_pi')
 
-    if warmth is prop is None:
-        answer = render_template('temp_and_humidity').format(IOT_ENV['temp'], IOT_ENV['humidity'])
+    if sensor is None:
+        answer = render_template('temp_and_humidity').format(get_last_temp(), get_last_humidity())
         return statement(answer).standard_card(card_title, answer, pi_img)
 
-    if warmth is not None:
-        answer = render_template('temp').format(IOT_ENV["temp"])
+    if sensor == SensorType.TEMPERATURE:
+        answer = render_template('temp').format(get_last_temp())
         return statement(answer).standard_card(card_title, answer, temp_img)
 
-    if prop == 'humidity':
-        card_img = humidity_img
-        answer = render_template('humidity').format(IOT_ENV["humidity"])
-    else:
-        card_img = temp_img
-        answer = render_template('temp').format(IOT_ENV["temp"])
-
+    answer = render_template('humidity').format(get_last_humidity())
     return statement(answer).standard_card(card_title, answer, card_img)
 
 

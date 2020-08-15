@@ -24,9 +24,9 @@ def launch():
     return welcome()
 
 
-@ask.intent('ClimateIntent', mapping={'prop': 'Property', 'warmth': 'Warmth'})
-def climate(prop, warmth):
-    return climate_info(prop, warmth)
+@ask.intent('SensorReading', mapping={'sensor': 'SensorType'})
+def climate(sensor):
+    return climate_info(sensor)
 
 
 @ask.intent('DiscoLightsIntent', mapping={'room': 'Room'})
