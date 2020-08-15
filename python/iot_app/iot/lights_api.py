@@ -71,3 +71,34 @@ class LightsDiscoveryResource(Resource):
         logging.info('GET /lights')
         data = [light.dump_props() for light in self.light_manager.get_all_lights()]
         return response_success(data)
+
+class LightEffectResource(Resource):
+    method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
+
+    light_manager = LightManager.instance()
+
+    __light_effect_put_parser = reqparse.RequestParser()
+    __light_effect_put_parser.add_argument('effect_name', type=str, required=True)
+    __light_effect_put_parser.add_argument('effect_props', type=dict)
+
+
+    def put(self, _id):
+        lights_by_id = get_lights_by_id(self.light_manager)
+        request_args = _exclude_none_values(self.__light_effect_put_parser.parse_args(strict=True))
+        logging.info(f'PUT /light/effect for ID: {_id}, args: {request_args}')
+
+        if _id not in lights_by_id.keys():
+            response_error(404, f"No light with ID: {_id}")
+
+        light = lights_by_id[_id]
+        if not light.is_connected:
+            response_error(404, 'Light is not currently connected')
+        effect_name = request_args.get('effect_name')
+        if effect_name not in Light.effects_map.keys() and effect_name is not None:
+            response_error(404, f'Invalid effect name: {effect_name}')
+        try:
+            light.set_effect(effect_name, request_args.get('effect_props', {}))
+            return response_success()
+        except ValueError as err:
+            logging.error(err)
+            response_error(400, str(err))
