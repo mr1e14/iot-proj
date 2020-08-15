@@ -15,9 +15,9 @@ api = Api(app)
 
 api.add_resource(TemperatureResource, '/iot/temperature')
 api.add_resource(HumidityResource, '/iot/humidity')
-api.add_resource(LightResource, '/iot/light/<string:_id>')
+api.add_resource(LightResource, '/iot/lights/<string:_id>')
+api.add_resource(LightEffectResource, '/iot/lights/<string:_id>/effect')
 api.add_resource(LightsDiscoveryResource, '/iot/lights')
-api.add_resource(LightEffectResource, '/iot/light/effect/<string:_id>')
 
 @ask.launch
 def launch():
