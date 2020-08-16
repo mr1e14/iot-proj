@@ -1,22 +1,21 @@
+from __future__ import annotations
+
 from iot_app.logger import get_logger
-import iot_app.db.lights as db
 from iot_app.config import config
 
-from typing import List, Dict, Tuple
 from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 from webcolors import hex_to_rgb, rgb_to_hex, normalize_hex
-
 from concurrent.futures.thread import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from typing import List, Dict
 
+import iot_app.db.lights as db
 import threading
-
-import time
 
 logging = get_logger(__name__)
 
 _lights_config = config['lights']
+
 
 class Color:
 

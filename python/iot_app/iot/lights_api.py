@@ -3,7 +3,7 @@ from iot_app.iot import make_api_key_validator, response_success, response_error
 from iot_app.iot.lights import LightManager, Light
 from iot_app.config import config
 
-from flask_restful import Resource, reqparse, fields
+from flask_restful import Resource, reqparse
 
 from typing import Dict
 

@@ -1,5 +1,4 @@
-from os.path import dirname, join, abspath
-from flask import Flask, request
+from flask import Flask
 from flask_restful import Api
 from flask_ask import Ask
 from iot_app.logger.logger import get_logger

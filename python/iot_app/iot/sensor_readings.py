@@ -3,7 +3,7 @@ from iot_app.config import config
 from iot_app.db.sensor_readings import save_temp, get_last_temp, save_humidity, get_last_humidity
 from iot_app.iot import make_api_key_validator, response_success, response_error
 
-from flask_restful import Resource, reqparse, fields
+from flask_restful import Resource, reqparse
 from bson.objectid import ObjectId
 
 logging = get_logger(__name__)

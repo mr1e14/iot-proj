@@ -5,7 +5,6 @@ from iot_app.iot.lights import LightManager, Light
 from iot_app.iot.sensor_readings import get_last_temp, get_last_humidity
 
 from typing import Optional, List
-from isodate import parse_duration
 
 
 """ Slot mappings """
