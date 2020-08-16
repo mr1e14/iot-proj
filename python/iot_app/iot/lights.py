@@ -8,7 +8,7 @@ from yeelight.transitions import *
 from webcolors import hex_to_rgb, rgb_to_hex, normalize_hex
 from concurrent.futures.thread import ThreadPoolExecutor
 from bson.objectid import ObjectId
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 
 import iot_app.db.lights as db
 import threading
@@ -51,11 +51,11 @@ class Color:
         }
 
     @property
-    def rgb_tuple(self):
+    def rgb_tuple(self) -> Tuple:
         return self.red, self.green, self.blue
 
     @property
-    def hex(self):
+    def hex(self) -> str:
         return rgb_to_hex(self.rgb_tuple)
 
 
@@ -170,6 +170,7 @@ class Light:
     def dump_props(self) -> Dict:
         """
         Create a dictionary of light props. Bulb props included only if light is connected
+        :return: dictionary of properties
         """
         props = {
             'id': str(self.id),
@@ -292,12 +293,16 @@ class Light:
             self.__clear_effect()
         self.__on = new_on
 
-    def set_effect(self, effect_name: str, effect_props: Dict):
+    def set_effect(self, effect_name: str or None, effect_props: Optional[Dict] = None):
         """
         Starts / stops a smart light effect.
-        :param effect_name: effect to be shown. Must be an existing key in 'effects_map' or None, which indicates stop current effect
-        :param effect_props: properties as supported by individual effects. If unsupported prop is supplied, effect constructor will throw TypeError
+        :param effect_name: effect to be shown. Must be an existing key in 'effects_map' or None
+        None effect_name indicates stop current effect
+        :param effect_props: properties as supported by individual effects. If unsupported prop is supplied, effect
+        constructor will throw TypeError
         """
+        if effect_props is None:
+            effect_props = {}
         try:
             if effect_name is None:
                 self.__bulb.stop_flow()

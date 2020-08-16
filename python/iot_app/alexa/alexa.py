@@ -7,7 +7,7 @@ from iot_app.iot.sensor_readings import get_last_temp, get_last_humidity
 from typing import Optional, List
 
 
-""" Slot mappings """
+# Slot mappings
 class SensorType:
     HUMIDITY = 'humidity'
     TEMPERATURE = 'temperature'
@@ -88,7 +88,7 @@ class LightAction:
             return check_result.get_failure_cause()
 
         for light in check_result.get_lights():
-            light.set_effect(None, {})
+            light.set_effect(None)
         return self.__stmt_stop_effect()
 
     def __card_effect_ok(self):
