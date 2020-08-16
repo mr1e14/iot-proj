@@ -3,7 +3,6 @@ from iot_app.logger import get_logger
 
 from marshmallow import Schema, fields, validate, ValidationError
 from typing import Dict
-from bson import ObjectId
 
 
 logging = get_logger(__name__)
