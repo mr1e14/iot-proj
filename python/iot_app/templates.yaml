@@ -17,23 +17,15 @@ temp:
 humidity:
     Humidity is at {} per cent right now
 
-disco_lights: |
+effect_start: |
   <speak>
-    Starting disco. Have fun!
+    Starting {0} effect. Have fun!
   </speak>
 
-disco_lights_card: Started disco lights
-disco_lights_stopped_card: Stopped disco lights
-
-fade_started: |
-  <speak>
-    Fading {name} light over {duration}
-  </speak>
-
-fade_started_card: Fading {name} light over {duration}
-fade_stopped_card: Stopped fading {name} light
+effect_start_card: Started {0} lights
+effect_stop_card: Effect stopped
 
 no_lights: Sorry. No lights are currently connected.
-
+no_default_lights: Sorry. No default lights are currently connected.
 no_such_light: I'm afraid the light called {} is not available
 

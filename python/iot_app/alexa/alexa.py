@@ -1,9 +1,44 @@
 from flask import render_template
 from flask_ask import question, statement
 from iot_app.assets.web_assets import *
-from iot_app.iot.lights import *
+from iot_app.iot.lights import LightManager, Light
 from iot_app.iot.sensor_readings import get_last_temp, get_last_humidity
+
+from typing import Optional, List
 from isodate import parse_duration
+
+
+""" Slot mappings """
+class SensorType:
+    HUMIDITY = 'humidity'
+    TEMPERATURE = 'temperature'
+
+
+class Room:
+    ALL = 'all'
+    LOUNGE = 'lounge'
+    BEDROOM = 'bedroom'
+
+
+class LightCheckResult:
+
+    def __init__(self, is_successful: bool, failure_cause: Optional[statement] = None,
+                 lights_to_use: Optional[List[Light]] = None):
+        self.__is_successful = is_successful
+        self.__cause = failure_cause
+        self.__lights = lights_to_use
+
+    def is_successful(self) -> bool:
+        return self.__is_successful
+
+    def get_failure_cause(self) -> statement:
+        return self.__cause
+
+    def get_lights(self) -> List[Light]:
+        return self.__lights
+
+
+lm = LightManager.instance()
 
 
 def welcome():
@@ -11,9 +46,6 @@ def welcome():
     question_text = render_template('welcome')
     return question(question_text).standard_card(card_title, question_text, pi_img)
 
-class SensorType:
-    HUMIDITY = 'humidity'
-    TEMPERATURE = 'temperature'
 
 def sensor_readings(sensor):
     card_title = render_template('card_title_pi')
@@ -30,179 +62,81 @@ def sensor_readings(sensor):
     return statement(answer).standard_card(card_title, answer, card_img)
 
 
-def start_disco(room):
-    return LightAction(LightManager(), render_template('card_title_lights'), light_img).start_disco(room)
+def start_effect(room, effect):
+    return LightAction(render_template('card_title_lights'), light_img).start_effect(room, effect)
 
 
-def stop_flow(room):
-    return LightAction(LightManager(), render_template('card_title_lights'), light_img).stop_flow(room)
-
-
-def start_fade(room, duration, off):
-    return LightAction(LightManager(), render_template('card_title_lights'), light_img).start_fade(room, duration, off)
-
-
-def stop_fade(room):
-    return LightAction(LightManager(), render_template('card_title_lights'), light_img).stop_fade(room)
+def stop_effect(room):
+    return LightAction(render_template('card_title_lights'), light_img).stop_effect(room)
 
 
 class LightAction:
-    def __init__(self, light_manager: LightManager, card_title: str, card_img: str):
-        self.light_manager = light_manager
+    def __init__(self, card_title: str, card_img: str):
         self.card_title = card_title
         self.card_img = card_img
 
-    def start_disco(self, room):
-        fail_stmt = self.__validate(room)
-        if fail_stmt is not None:
-            return fail_stmt
+    def start_effect(self, room, effect) -> statement:
+        check_result = self.__check_lights(room)
+        if not check_result.is_successful():
+            return check_result.get_failure_cause()
 
-        if room is None:
-            self.light_manager.start_disco()
-            return self.__stmt_disco_ok()
-        else:
-            if room == 'all' or room == 'everywhere':
-                self.light_manager.start_disco(*self.light_manager.get_all_lights())
-                return self.__stmt_disco_ok()
-            else:
-                light = self.light_manager.get_light_by_name(room)
-                self.light_manager.start_disco(light)
-                return self.__stmt_disco_ok()
+        for light in check_result.get_lights():
+            light.set_effect(effect, {})
 
-    def stop_flow(self, room):
-        fail_stmt = self.__validate(room)
-        if fail_stmt is not None:
-            return fail_stmt
+    def stop_effect(self, room):
+        check_result = self.__check_lights(room)
+        if not check_result.is_successful():
+            return check_result.get_failure_cause()
 
-        if room is None or room == 'all' or room == 'everywhere':
-            self.light_manager.stop_flow(*self.light_manager.get_all_lights())
-            return self.__stmt_stopped_lights()
-        else:
-            light = self.light_manager.get_light_by_name(room)
-            self.light_manager.stop_flow(light)
-            return self.__stmt_stopped_lights()
+        for light in check_result.get_lights():
+            light.set_effect(None, {})
+        return self.__stmt_stop_effect()
 
-    def start_fade(self, room, duration, off):
-        fail_stmt = self.__validate(room)
-        if fail_stmt is not None:
-            return fail_stmt
-
-        turn_off = off is not None
-
-        if duration is not None:
-            duration = int(parse_duration(duration).total_seconds())
-        else:
-            duration = 120  # default, in seconds
-
-        if room is None:
-            self.light_manager.fade(duration, turn_off)
-            room = self.light_manager.get_default_room().lower()
-            return self.__stmt_fade_ok(room, duration)
-        else:
-            if room == 'all' or room == 'everywhere':
-                self.light_manager.fade(duration, turn_off, 5, *self.light_manager.get_all_lights())
-                return self.__stmt_fade_ok(room, duration)
-            else:
-                light = self.light_manager.get_light_by_name(room)
-                self.light_manager.fade(duration, turn_off, 5, light)
-                return self.__stmt_fade_ok(room, duration)
-
-    def stop_fade(self, room):
-        fail_stmt = self.__validate(room)
-        if fail_stmt is not None:
-            return fail_stmt
-
-        if room is None:
-            self.light_manager.stop_fade()
-            room = self.light_manager.get_default_room().lower()
-            return self.__stmt_fade_stopped(room)
-        if room == 'all' or room == 'everywhere':
-            self.light_manager.stop_fade(*self.light_manager.get_all_lights())
-            return self.__stmt_fade_stopped(room)
-        else:
-            light = self.light_manager.get_light_by_name(room)
-            self.light_manager.stop_fade(light)
-            return self.__stmt_fade_stopped(room)
-
-    def __card_disco_ok(self):
-        return self.card_title, render_template('disco_lights_card'), self.card_img
+    def __card_effect_ok(self):
+        return self.card_title, render_template('effect_start_card'), self.card_img
 
     def __card_no_lights(self):
         return self.card_title, render_template('no_lights'), self.card_img
 
+    def __card_no_default_lights(self):
+        return self.card_title, render_template('no_default_lights'), self.card_img
+
     def __card_no_such_light(self, light_name):
         return self.card_title, render_template('no_such_light').format(light_name), self.card_img
 
-    def __card_stopped_lights(self):
-        return self.card_title, render_template('disco_lights_stopped_card'), self.card_img
+    def __card_stop_effect(self):
+        return self.card_title, render_template('effect_stop_card'), self.card_img
 
-    def __card_fade_ok(self, room, duration):
-        return self.card_title, render_template('fade_started_card').format(name=room, duration=duration), self.card_img
-
-    def __card_fade_stopped(self, room):
-        return self.card_title, render_template('fade_stopped_card').format(name=room)
-
-    def __stmt_disco_ok(self):
-        return statement(render_template('disco_lights')).standard_card(*self.__card_disco_ok())
+    def __stmt_effect_ok(self):
+        return statement(render_template('effect_start')).standard_card(*self.__card_effect_ok())
 
     def __stmt_no_lights(self):
         return statement(render_template('no_lights')).standard_card(*self.__card_no_lights())
+
+    def __stmt_no_default_lights(self):
+        return statement(render_template('no_default_lights')).standard_card(*self.__card_no_default_lights())
 
     def __stmt_no_such_light(self, light_name):
         return statement(render_template('no_such_light').format(
             light_name)).standard_card(*self.__card_no_such_light(light_name))
 
-    def __stmt_stopped_lights(self):
-        return statement('OK').standard_card(*self.__card_stopped_lights())
+    def __stmt_stop_effect(self):
+        return statement('OK').standard_card(*self.__card_stop_effect())
 
-    def __stmt_fade_ok(self, room, duration):
-        return statement(render_template('fade_started').format(
-            name=room,
-            duration=get_duration_str(duration))).standard_card(*self.__card_fade_ok(room, get_duration_str(duration)))
+    def __check_lights(self, room):
+        all_lights = lm.get_all_lights()
+        if len(all_lights) == 0:
+            return LightCheckResult(is_successful=False, failure_cause=self.__stmt_no_lights())
 
-    def __stmt_fade_stopped(self, room):
-        return statement('OK').standard_card(*self.__card_fade_stopped(room))
-
-    def __validate(self, room):
-        if len(self.light_manager.get_all_lights()) == 0:
-            return self.__stmt_no_lights()
-
-        if room == 'all' or room == 'everywhere':
-            return None
+        if room == Room.ALL:
+            return LightCheckResult(is_successful=True, lights_to_use=all_lights)
 
         if room is None:
-            light = self.light_manager.get_light_by_name(self.light_manager.get_default_room())
-            if light is not None:
-                return None
-            return self.__stmt_no_such_light(self.light_manager.get_default_room())
-        else:
-            light = self.light_manager.get_light_by_name(room)
-            if light is not None:
-                return None
-            else:
-                return self.__stmt_no_such_light(room)
+            if len(lm.default_lights) == 0:
+                return LightCheckResult(is_successful=False, failure_cause=self.__stmt_no_default_lights())
+            return LightCheckResult(is_successful=True, lights_to_use=lm.default_lights)
 
-
-def get_duration_str(duration: int) -> str:
-    if duration < 60:
-        return '{seconds} seconds'.format(seconds=duration)
-
-    minutes = int(duration / 60)
-
-    if minutes > 1:
-        minutes_plural = 's'
-    else:
-        minutes_plural = ''
-
-    if duration % 60 != 0:
-        seconds = duration - (minutes * 60)
-
-        if seconds > 1:
-            seconds_plural = 's'
-        else:
-            seconds_plural = ''
-
-        return '{minutes} minute{m_plural} and {seconds} second{s_plural}'.format(
-            minutes=minutes, m_plural=minutes_plural, seconds=seconds, s_plural=seconds_plural)
-
-    return '{minutes} minute{m_plural}'.format(minutes=minutes, m_plural=minutes_plural)
+        light = lm.get_light_by_name(room)
+        if light is None:
+            return LightCheckResult(is_successful=False, failure_cause=self.__stmt_no_such_light(room))
+        return LightCheckResult(is_successful=True, lights_to_use=[light])
