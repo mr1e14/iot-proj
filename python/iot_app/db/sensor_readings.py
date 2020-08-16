@@ -14,15 +14,18 @@ def get_last_temp():
     logging.debug("Getting last temperature")
     return temperature.find_one({}, sort=[('$natural', -1)])
 
+
 @handle_mongo_error
 def save_temp(value):
     logging.debug('Saving temperature')
     temperature.insert_one({'value': value})
 
+
 @handle_mongo_error
 def get_last_humidity():
     logging.debug("Getting last humidity")
     return humidity.find_one({}, sort=[('$natural', -1)])
+
 
 @handle_mongo_error
 def save_humidity(value):

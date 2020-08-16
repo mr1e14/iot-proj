@@ -16,7 +16,8 @@ class ReadingType:
 
 class SensorReadingResource(Resource):
 
-    def transform_db_result(self, db_result, reading_type):
+    @staticmethod
+    def transform_db_result(db_result, reading_type):
         """
         Transforms raw mongo db result set to client-friendly response, ready to jsonify
         """
@@ -60,6 +61,7 @@ class TemperatureResource(SensorReadingResource):
             logging.error(err)
             return response_error()
 
+
 class HumidityResource(SensorReadingResource):
     __humidity_put_parser = reqparse.RequestParser()
     __humidity_put_parser.add_argument("humidity", type=float, case_sensitive=False, required=True)
@@ -67,7 +69,8 @@ class HumidityResource(SensorReadingResource):
     def __transform_for_humidity(self, db_result):
         return self.transform_db_result(db_result, ReadingType.HUMIDITY)
 
-    def __is_valid_humidity(self, value):
+    @staticmethod
+    def __is_valid_humidity(value):
         if not isinstance(value, float):
             return False
         return 0 <= value <= 1

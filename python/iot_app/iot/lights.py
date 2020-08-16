@@ -7,6 +7,7 @@ from yeelight import Bulb, Flow, discover_bulbs, BulbException
 from yeelight.transitions import *
 from webcolors import hex_to_rgb, rgb_to_hex, normalize_hex
 from concurrent.futures.thread import ThreadPoolExecutor
+from bson.objectid import ObjectId
 from typing import List, Dict
 
 import iot_app.db.lights as db
@@ -24,21 +25,23 @@ class Color:
         self.green = green
         self.blue = blue
 
-    def from_rgb_int(rgb_int: int):
+    @staticmethod
+    def from_rgb_int(rgb_int: int) -> Color:
         blue = rgb_int & 255
         green = (rgb_int >> 8) & 255
         red = (rgb_int >> 16) & 255
         return Color(red=red, green=green, blue=blue)
 
-    def from_hex(hex: str):
+    @staticmethod
+    def from_hex(_hex: str) -> Color:
         try:
-            normalized_hex = normalize_hex(hex)
+            normalized_hex = normalize_hex(_hex)
             red, green, blue = hex_to_rgb(normalized_hex)
             return Color(red=red, green=green, blue=blue)
         except ValueError as err:
             logging.error(err)
             raise ValueError('Hex color value supplied is invalid')
-        
+
     @property
     def rgb_dict(self) -> Dict:
         return {
@@ -49,11 +52,12 @@ class Color:
 
     @property
     def rgb_tuple(self):
-        return (self.red, self.green, self.blue)
+        return self.red, self.green, self.blue
 
     @property
     def hex(self):
         return rgb_to_hex(self.rgb_tuple)
+
 
 class LightEffect:
 
@@ -62,6 +66,7 @@ class LightEffect:
 
     def get_flow(self) -> Flow:
         raise NotImplementedError
+
 
 class DiscoEffect(LightEffect):
 
@@ -72,6 +77,7 @@ class DiscoEffect(LightEffect):
     def get_flow(self):
         return Flow(count=self.__count, transitions=disco())
 
+
 class StrobeEffect(LightEffect):
 
     def __init__(self, count=0):
@@ -80,6 +86,7 @@ class StrobeEffect(LightEffect):
 
     def get_flow(self):
         return Flow(count=self.__count, transitions=strobe())
+
 
 class LSDEffect(LightEffect):
 
@@ -91,6 +98,7 @@ class LSDEffect(LightEffect):
     def get_flow(self):
         return Flow(count=self.__count, transitions=lsd(duration=self.__duration))
 
+
 class PoliceEffect(LightEffect):
 
     def __init__(self, count=0, duration=300):
@@ -100,6 +108,7 @@ class PoliceEffect(LightEffect):
 
     def get_flow(self):
         return Flow(count=self.__count, transitions=police(duration=self.__duration))
+
 
 class RandomLoopEffect(LightEffect):
 
@@ -112,9 +121,7 @@ class RandomLoopEffect(LightEffect):
         return Flow(count=self.__count, transitions=randomloop(duration=self.__duration))
 
 
-
-class Light():
-
+class Light:
     db_props = ('name', 'is_default', 'ip')
     bulb_props = ('on', 'brightness', 'color', 'is_flowing')
     effects_map = {
@@ -123,18 +130,22 @@ class Light():
         'police': PoliceEffect,
         'strobe': StrobeEffect,
         'random': RandomLoopEffect
-        }
+    }
 
     def __init__(self, ip, _id, name, is_default, is_connected):
         self.__bulb = Bulb(ip, auto_on=True)
+        self.__ip = ip
         self.__id = _id
         self.__name = name
         self.__is_default = is_default
         self.__is_connected = is_connected
+        self.__brightness = 0
+        self.__on = False
+        self.__color = None
+        self.__is_flowing = False
         self.__effect = None
         self.__effect_props = {}
         self.__lock = threading.RLock()
-
 
     def refresh_props(self):
         """
@@ -169,13 +180,13 @@ class Light():
         }
         if self.is_connected:
             props = {**props,
-                'brightness': self.brightness,
-                'on': self.on,
-                'color': self.color.hex,
-                'is_flowing': self.__is_flowing,
-                'effect': self.__effect,
-                'effect_props': self.__effect_props
-            }
+                     'brightness': self.brightness,
+                     'on': self.on,
+                     'color': self.color.hex,
+                     'is_flowing': self.__is_flowing,
+                     'effect': self.__effect,
+                     'effect_props': self.__effect_props
+                     }
         return props
 
     def __save(self):
@@ -183,14 +194,14 @@ class Light():
         Saves database properties of a light
         """
         db.save_light({'ip': self.ip,
-            'name': self.name,
-            'is_default': self.is_default},
-            _id=self.id
-        )
+                       'name': self.name,
+                       'is_default': self.is_default},
+                      _id=self.id
+                      )
 
     @property
     def ip(self):
-        return self.__bulb._ip
+        return self.__ip
 
     @property
     def id(self):
@@ -199,11 +210,11 @@ class Light():
     @property
     def is_connected(self):
         return self.__is_connected
-    
+
     @property
     def name(self):
         return self.__name
-    
+
     @name.setter
     def name(self, new_name: str):
         """
@@ -219,7 +230,7 @@ class Light():
     @property
     def is_default(self):
         return self.__is_default
-    
+
     @is_default.setter
     def is_default(self, new_is_default: bool):
         """
@@ -257,22 +268,21 @@ class Light():
         """
         if not isinstance(new_color, (Color, str, tuple)):
             raise ValueError('Color must be Color object, hex string or RGB tuple')
-        color_obj = None
+
         if isinstance(new_color, Color):
             color_obj = new_color
         elif isinstance(new_color, str):
             color_obj = Color.from_hex(new_color)
         else:
             color_obj = Color(*new_color)
-        
+
         self.__bulb.set_rgb(**color_obj.rgb_dict)
         self.__color = color_obj
-    
 
     @property
     def on(self):
         return self.__on
-    
+
     @on.setter
     def on(self, new_on: bool):
         if new_on:
@@ -282,12 +292,11 @@ class Light():
             self.__clear_effect()
         self.__on = new_on
 
-
     def set_effect(self, effect_name: str, effect_props: Dict):
         """
         Starts / stops a smart light effect.
         :param effect_name: effect to be shown. Must be an existing key in 'effects_map' or None, which indicates stop current effect
-        :effect_props: properties as supported by individual effects. If unsupported prop is supplied, effect constructor will throw TypeError
+        :param effect_props: properties as supported by individual effects. If unsupported prop is supplied, effect constructor will throw TypeError
         """
         try:
             if effect_name is None:
@@ -345,7 +354,7 @@ def _create_light(db_data: Dict, is_connected: bool) -> Light:
 
 class NotificationLevel:
     #    R   G    B
-    OK = 0,  255, 100
+    OK = 0, 255, 100
     INFO = 0, 150, 255
     WARNING = 255, 150, 0
     ERROR = 255, 0, 50
@@ -361,16 +370,18 @@ class LightManager:
             self.__do_refresh_light_props()
             LightManager.__instance = self
 
-    def instance():
+    @staticmethod
+    def instance() -> LightManager:
         if LightManager.__instance is None:
             LightManager()
         return LightManager.__instance
 
-
+    @staticmethod
     def __save_new_lights(bulb_info: List[Dict]):
         """
         Saves bulbs that are not yet in the database
-        :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently connected on the network
+        :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently
+        connected on the network
         """
         db_lights = db.get_lights()
         for bulb in bulb_info:
@@ -387,26 +398,15 @@ class LightManager:
                 return light
         return None
 
-    def __get_light_by_ip(self, ip):
+    def get_light_by_id(self, _id: str):
         for light in self.__lights:
-            if light.ip == ip:
+            if light.id == ObjectId(_id):
                 return light
         return None
 
     @property
     def default_lights(self):
         return [light for light in self.__lights if light.is_default]
-
-    def start_disco(self, *bulbs):
-        logging.info('Starting disco')
-
-        flow = Flow(count=0, transitions=disco())
-
-        if len(bulbs) == 0:
-            bulbs = [self.__default]
-
-        for bulb in bulbs:
-            bulb.start_flow(flow)
 
     def notify(self, level=NotificationLevel.INFO, *bulbs):
         logging.info(f'Flashing notification ({level})')
@@ -415,19 +415,10 @@ class LightManager:
         flow = Flow(count=3, transitions=pulse(red, green, blue, duration=_lights_config['notify_duration']))
 
         if len(bulbs) == 0:
-            bulbs = [self.default_light]
+            bulbs = [self.default_lights]
 
         for bulb in bulbs:
             bulb.start_flow(flow)
-
-    def stop_flow(self, *bulbs):
-        logging.info('Stopping flow')
-
-        if len(bulbs) == 0:
-            bulbs = [self.default_light]
-
-        for bulb in bulbs:
-            bulb.stop_flow()
 
     def get_all_lights(self) -> List[Light]:
         return self.__lights
@@ -448,9 +439,9 @@ class LightManager:
                 if self.__get_light_by_ip(db_light['ip']) is None:
                     executor.submit(
                         _create_light, db_light, db_light['ip'] in [bulb['ip'] for bulb in connected_bulbs]
-                        ).add_done_callback(
-                            lambda future: self.__lights.append(future.result())
-                            )
+                    ).add_done_callback(
+                        lambda future: self.__lights.append(future.result())
+                    )
         thread = threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery)
         thread.daemon = True
         thread.start()
@@ -466,4 +457,9 @@ class LightManager:
         thread = threading.Timer(_lights_config['refresh_interval'], self.__do_refresh_light_props)
         thread.daemon = True
         thread.start()
-        
+
+    def __get_light_by_ip(self, ip):
+        for light in self.__lights:
+            if light.ip == ip:
+                return light
+        return None

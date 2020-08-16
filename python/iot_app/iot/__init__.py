@@ -5,14 +5,18 @@ from functools import wraps
 import hmac
 
 
-def response_success(data={}):
+def response_success(data=None):
+    if data is None:
+        data = {}
     return jsonify({
         'success': True,
         'data': data
     })
 
+
 def response_error(error_code=500, message='Server encountered error processing the request'):
     abort(error_code, message=message, success=False)
+
 
 def make_api_key_validator(api_key):
     """
@@ -29,6 +33,7 @@ def make_api_key_validator(api_key):
             return func(*args, **kwargs)
         return wrapper
     return validate_api_key
+
 
 from .sensor_readings import TemperatureResource, HumidityResource
 from .lights_api import LightResource, LightsDiscoveryResource, LightEffectResource
