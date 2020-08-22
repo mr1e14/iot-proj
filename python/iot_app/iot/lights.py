@@ -251,8 +251,7 @@ class Light:
             self.__bulb.set_brightness(new_brightness)
         except BulbException as err:
             logging.error(err)
-            self.__implied_disconnected()
-            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
+            self.__handle_connection_failure()
         self.__brightness = new_brightness
 
     @property
@@ -279,8 +278,7 @@ class Light:
             self.__bulb.set_rgb(**color_obj.rgb_dict)
         except BulbException as err:
             logging.error(err)
-            self.__implied_disconnected()
-            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
+            self.__handle_connection_failure()
         self.__color = color_obj
 
     @property
@@ -297,8 +295,7 @@ class Light:
                 self.__clear_effect()
         except BulbException as err:
             logging.error(err)
-            self.__implied_disconnected()
-            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
+            self.__handle_connection_failure()
         self.__on = new_on
 
     def set_effect(self, effect_name: str or None, effect_props: Optional[Dict] = None):
@@ -327,8 +324,7 @@ class Light:
                     raise LightException('Props supplied to effect are incorrect')
         except BulbException as err:
             logging.error(err)
-            self.__implied_disconnected()
-            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
+            self.__handle_connection_failure()
 
     def __clear_effect(self):
         """
@@ -338,13 +334,17 @@ class Light:
         self.__effect = None
         self.__effect_props = {}
 
-    def __implied_disconnected(self):
-        """
-        Invoked when behaviour of the light implies it is no longer connected, so was probably turned off
-        Resets properties to the state they must be in if the light is truly turned off
-        """
+    def __clear_connection_props(self):
+        """Resets properties to the state they must be in if the light is turned off """
         self.__is_connected = False
         self.__clear_effect()
+
+    def __handle_connection_failure(self):
+        """
+        Invoked when smart bulb failed to perform requested operation
+        """
+        self.__clear_connection_props()
+        raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
 
     def __refresh_props(self):
         """
@@ -361,7 +361,7 @@ class Light:
                 self.__color = Color.from_rgb_int(rgb_int)
                 self.__is_flowing = props['flowing'] == '1'
             except BulbException:
-                self.__implied_disconnected()
+                self.__clear_connection_props()
 
     def __do_refresh_light_props(self):
         """
