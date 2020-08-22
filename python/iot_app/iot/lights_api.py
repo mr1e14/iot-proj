@@ -1,7 +1,7 @@
 from iot_app.logger import get_logger
 from iot_app.iot import make_api_key_validator, response_success, response_error
 from iot_app.iot.lights import LightManager, Light, LightException
-from iot_app.config import config
+from iot_app.config import secrets
 
 from flask_restful import Resource, reqparse
 from typing import Dict
@@ -23,7 +23,7 @@ def _find_or_abort(_id: str) -> Light:
 
 
 class LightResource(Resource):
-    method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
 
     __light_put_parser = reqparse.RequestParser()
     __light_put_parser.add_argument('name', type=str)
@@ -57,7 +57,7 @@ class LightResource(Resource):
 
 
 class LightsDiscoveryResource(Resource):
-    method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
 
     light_manager = LightManager.instance()
 
@@ -68,7 +68,7 @@ class LightsDiscoveryResource(Resource):
 
 
 class LightEffectResource(Resource):
-    method_decorators = [make_api_key_validator(config['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
 
     light_manager = LightManager.instance()
 

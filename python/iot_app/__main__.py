@@ -3,6 +3,7 @@ from flask_restful import Api
 from flask_ask import Ask
 from iot_app.logger.logger import get_logger
 from iot_app.iot import TemperatureResource, HumidityResource, LightResource, LightsDiscoveryResource, LightEffectResource
+from iot_app.config import secrets
 
 import iot_app.alexa as alexa
 
@@ -44,6 +45,8 @@ def homepage():
     return '200'
 
 
+_app_config = secrets['app']
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host=_app_config['host'], port=_app_config['port'])
 

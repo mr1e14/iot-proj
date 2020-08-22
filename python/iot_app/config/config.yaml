@@ -1,0 +1,6 @@
+
+lights:
+    discovery_interval: 25 # interval for searching lights on the network (s)
+    refresh_interval: 45 # refresh light props interval (s)
+    notify_duration: 400 # duration of pulse (notification) effect (ms)
+    max_light_length: 32 # max light name character length

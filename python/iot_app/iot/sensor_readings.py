@@ -1,5 +1,5 @@
 from iot_app.logger.logger import get_logger
-from iot_app.config import config
+from iot_app.config import secrets
 from iot_app.db.sensor_readings import save_temp, get_last_temp, save_humidity, get_last_humidity
 from iot_app.iot import make_api_key_validator, response_success, response_error
 
@@ -32,7 +32,7 @@ class SensorReadingResource(Resource):
             'timestamp': timestamp
         }
 
-    method_decorators = [make_api_key_validator(config['SENSORS_API_KEY'])]
+    method_decorators = [make_api_key_validator(secrets['SENSORS_API_KEY'])]
 
 
 class TemperatureResource(SensorReadingResource):

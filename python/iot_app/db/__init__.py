@@ -1,14 +1,16 @@
-from iot_app.config import config
+from iot_app.config import secrets
+from iot_app.logger import get_logger
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from functools import wraps
 
-_db_config = config['db']
+logging = get_logger(__name__)
 
+_db_config = secrets['db']
 _conn = MongoClient(host=_db_config['host'], port=_db_config['port'])
-
 db = _conn[_db_config['name']]
+
 
 def handle_mongo_error(func):
     @wraps(func)
