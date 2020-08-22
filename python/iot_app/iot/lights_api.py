@@ -1,6 +1,6 @@
 from iot_app.logger import get_logger
 from iot_app.iot import make_api_key_validator, response_success, response_error
-from iot_app.iot.lights import LightManager, Light
+from iot_app.iot.lights import LightManager, Light, LightException
 from iot_app.config import config
 
 from flask_restful import Resource, reqparse
@@ -51,7 +51,7 @@ class LightResource(Resource):
             for prop, value in request_args.items():
                 setattr(light, prop, value)
             return response_success()
-        except ValueError as err:
+        except (ValueError, LightException) as err:
             logging.error(err)
             response_error(400, str(err))
 
@@ -90,6 +90,6 @@ class LightEffectResource(Resource):
         try:
             light.set_effect(effect_name, request_args.get('effect_props', {}))
             return response_success()
-        except ValueError as err:
+        except (ValueError, LightException) as err:
             logging.error(err)
             response_error(400, str(err))

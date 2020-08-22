@@ -11,7 +11,9 @@ from bson.objectid import ObjectId
 from typing import List, Dict, Tuple, Optional
 
 import iot_app.db.lights as db
+
 import threading
+import time
 
 logging = get_logger(__name__)
 
@@ -57,6 +59,10 @@ class Color:
     @property
     def hex(self) -> str:
         return rgb_to_hex(self.rgb_tuple)
+
+
+class LightException(Exception):
+    """Exception raised due to failed operations on lights"""
 
 
 class LightEffect:
@@ -133,6 +139,7 @@ class Light:
     }
 
     def __init__(self, ip, _id, name, is_default, is_connected):
+        logging.info(f'Creating light with IP: {ip}')
         self.__bulb = Bulb(ip, auto_on=True)
         self.__ip = ip
         self.__id = _id
@@ -147,25 +154,11 @@ class Light:
         self.__effect_props = {}
         self.__lock = threading.RLock()
 
-    def refresh_props(self):
-        """
-        Makes a direct call on the smart bulb to update properties visible via APIs
-        """
-        with self.__lock:
-            logging.debug(f'Refreshing props of light, IP: {self.ip}')
-            try:
-                props = self.__bulb.get_properties()
-                self.__is_connected = True
-                self.__brightness = int(props['bright'])
-                self.__on = props['power'] == 'on'
-                rgb_int = int(props['rgb'])
-                self.__color = Color.from_rgb_int(rgb_int)
-                self.__is_flowing = props['flowing'] == '1'
-            except BulbException as err:
-                self.__implied_disconnected()
-
-    def get_prop(self, prop: str) -> str:
-        return self.__bulb.get_properties([prop]).get(prop)
+        if is_connected:
+            self.__refresh_props()
+        refresh_thread = threading.Thread(target=self.__do_refresh_light_props)
+        refresh_thread.daemon = True
+        refresh_thread.start()
 
     def dump_props(self) -> Dict:
         """
@@ -254,7 +247,12 @@ class Light:
         """
         if not 1 <= new_brightness <= 100:
             raise ValueError('Brightness must be between 1 and 100')
-        self.__bulb.set_brightness(new_brightness)
+        try:
+            self.__bulb.set_brightness(new_brightness)
+        except BulbException as err:
+            logging.error(err)
+            self.__implied_disconnected()
+            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
         self.__brightness = new_brightness
 
     @property
@@ -277,7 +275,12 @@ class Light:
         else:
             color_obj = Color(*new_color)
 
-        self.__bulb.set_rgb(**color_obj.rgb_dict)
+        try:
+            self.__bulb.set_rgb(**color_obj.rgb_dict)
+        except BulbException as err:
+            logging.error(err)
+            self.__implied_disconnected()
+            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
         self.__color = color_obj
 
     @property
@@ -286,11 +289,16 @@ class Light:
 
     @on.setter
     def on(self, new_on: bool):
-        if new_on:
-            self.__bulb.turn_on()
-        else:
-            self.__bulb.turn_off()
-            self.__clear_effect()
+        try:
+            if new_on:
+                self.__bulb.turn_on()
+            else:
+                self.__bulb.turn_off()
+                self.__clear_effect()
+        except BulbException as err:
+            logging.error(err)
+            self.__implied_disconnected()
+            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
         self.__on = new_on
 
     def set_effect(self, effect_name: str or None, effect_props: Optional[Dict] = None):
@@ -308,14 +316,19 @@ class Light:
                 self.__bulb.stop_flow()
                 self.__clear_effect()
             else:
-                effect = self.effects_map[effect_name](**effect_props)
-                self.__bulb.start_flow(effect.get_flow())
-                self.__is_flowing = True
-                self.__effect = effect_name
-                self.__effect_props = effect_props
-        except TypeError as err:
+                try:
+                    effect = self.effects_map[effect_name](**effect_props)
+                    self.__bulb.start_flow(effect.get_flow())
+                    self.__is_flowing = True
+                    self.__effect = effect_name
+                    self.__effect_props = effect_props
+                except TypeError as err:
+                    logging.error(err)
+                    raise LightException('Props supplied to effect are incorrect')
+        except BulbException as err:
             logging.error(err)
-            raise ValueError('Props supplied to effect are incorrect')
+            self.__implied_disconnected()
+            raise LightException(f"Cannot connect to the smart bulb with IP: {self.ip}")
 
     def __clear_effect(self):
         """
@@ -333,28 +346,40 @@ class Light:
         self.__is_connected = False
         self.__clear_effect()
 
+    def __refresh_props(self):
+        """
+        Makes a direct call on the smart bulb to update properties visible via APIs
+        """
+        with self.__lock:
+            logging.debug(f'Refreshing props of light, IP: {self.ip}')
+            try:
+                props = self.__bulb.get_properties()
+                self.__is_connected = True
+                self.__brightness = int(props['bright'])
+                self.__on = props['power'] == 'on'
+                rgb_int = int(props['rgb'])
+                self.__color = Color.from_rgb_int(rgb_int)
+                self.__is_flowing = props['flowing'] == '1'
+            except BulbException:
+                self.__implied_disconnected()
+
+    def __do_refresh_light_props(self):
+        """
+        Periodically, refreshes properties of this light.
+        The requirement comes from that clients are not allowed to call 'get_properties' directly on a Bulb, which is
+        the only way to know the true, current state, but there's a limit on direct bulb API calls per minute
+        """
+        while True:
+            time.sleep(_lights_config['refresh_interval'])
+            self.__refresh_props()
+
     def __setattr__(self, name, value):
         try:
             with self.__lock:
-                try:
-                    super(Light, self).__setattr__(name, value)
-                except BulbException as err:
-                    # bulb no longer online
-                    logging.error(err)
-                    self.__implied_disconnected()
-                    raise err
+                super(Light, self).__setattr__(name, value)
         except AttributeError:
             # no lock yet
             super(Light, self).__setattr__(name, value)
-
-
-def _create_light(db_data: Dict, is_connected: bool) -> Light:
-    logging.info(f'Creating light with IP: {db_data["ip"]}')
-    light = Light(**db_data, is_connected=is_connected)
-
-    if is_connected:
-        light.refresh_props()
-    return light
 
 
 class NotificationLevel:
@@ -372,7 +397,6 @@ class LightManager:
         if LightManager.__instance is None:
             self.__lights = []
             self.__do_lights_discovery()
-            self.__do_refresh_light_props()
             LightManager.__instance = self
 
     @staticmethod
@@ -442,24 +466,13 @@ class LightManager:
         with ThreadPoolExecutor() as executor:
             for db_light in db_lights:
                 if self.__get_light_by_ip(db_light['ip']) is None:
+                    is_connected = db_light['ip'] in [bulb['ip'] for bulb in connected_bulbs]
                     executor.submit(
-                        _create_light, db_light, db_light['ip'] in [bulb['ip'] for bulb in connected_bulbs]
+                        Light, **db_light, is_connected=is_connected
                     ).add_done_callback(
                         lambda future: self.__lights.append(future.result())
                     )
         thread = threading.Timer(_lights_config['discovery_interval'], self.__do_lights_discovery)
-        thread.daemon = True
-        thread.start()
-
-    def __do_refresh_light_props(self):
-        """
-        Periodically, refreshes properties of lights.
-        The requirement comes from that clients are not allowed to call 'get_properties' directly on a Bulb, which is
-        the only way to know the true, current state, but there's a limit on direct bulb API calls per minute
-        """
-        for light in self.__lights:
-            light.refresh_props()
-        thread = threading.Timer(_lights_config['refresh_interval'], self.__do_refresh_light_props)
         thread.daemon = True
         thread.start()
 
