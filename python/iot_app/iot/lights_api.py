@@ -7,6 +7,7 @@ from flask_restful import Resource, reqparse
 from typing import Dict
 
 logging = get_logger(__name__)
+_api_secrets = secrets['api']
 
 lm = LightManager.instance()
 
@@ -23,7 +24,7 @@ def _find_or_abort(_id: str) -> Light:
 
 
 class LightResource(Resource):
-    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(_api_secrets['LIGHTS_API_KEY'])]
 
     __light_put_parser = reqparse.RequestParser()
     __light_put_parser.add_argument('name', type=str)
@@ -57,7 +58,7 @@ class LightResource(Resource):
 
 
 class LightsDiscoveryResource(Resource):
-    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(_api_secrets['LIGHTS_API_KEY'])]
 
     light_manager = LightManager.instance()
 
@@ -68,7 +69,7 @@ class LightsDiscoveryResource(Resource):
 
 
 class LightEffectResource(Resource):
-    method_decorators = [make_api_key_validator(secrets['LIGHTS_API_KEY'])]
+    method_decorators = [make_api_key_validator(_api_secrets['LIGHTS_API_KEY'])]
 
     light_manager = LightManager.instance()
 

@@ -7,6 +7,7 @@ from flask_restful import Resource, reqparse
 from bson.objectid import ObjectId
 
 logging = get_logger(__name__)
+_api_secrets = secrets['api']
 
 
 class ReadingType:
@@ -32,7 +33,7 @@ class SensorReadingResource(Resource):
             'timestamp': timestamp
         }
 
-    method_decorators = [make_api_key_validator(secrets['SENSORS_API_KEY'])]
+    method_decorators = [make_api_key_validator(_api_secrets['SENSORS_API_KEY'])]
 
 
 class TemperatureResource(SensorReadingResource):
