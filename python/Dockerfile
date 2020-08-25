@@ -26,8 +26,9 @@ RUN pip3 install -r requirements.txt
 ARG CONFD_BIN=/usr/local/bin/confd
 RUN curl -s -L https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 -o $CONFD_BIN
 RUN chmod +x $CONFD_BIN
-ENV CONFD_HOME=/etc/confd
+ARG CONFD_HOME=/etc/confd
 RUN mkdir $CONFD_HOME
+# These are directories where confd looks for templates by default
 COPY ./confd/conf.d $CONFD_HOME/conf.d
 COPY ./confd/templates $CONFD_HOME/templates
 
