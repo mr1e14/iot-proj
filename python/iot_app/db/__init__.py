@@ -10,6 +10,7 @@ logging = get_logger(__name__)
 _db_config = secrets['db']
 _conn = MongoClient(host=_db_config['host'], port=_db_config['port'])
 db = _conn[_db_config['name']]
+db.authenticate(name=_db_config['username'], password=_db_config['password'])
 
 
 def handle_mongo_error(func):

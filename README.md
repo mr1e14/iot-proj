@@ -6,12 +6,19 @@ custom Alexa skill requests
 - INO scripts for reading sensor values and sending data to the Flask server
 - Scripts for environment setup
 
-## Docker
+### Docker
 Create a docker network for components to communicate with  
 `docker network create iot_net`  
 Build the Flask application image using  
 `docker build -t iotproj:<TAG> .`  
-Run container with:  
+Run container with  
 `docker run -d --name iot-app --net iot-net -p <HOST_PORT>:<CONTAINER_PORT> iotproj:<TAG>
 `  
-Override environment variables with `-e` e.g. `-e APP_PORT=5001`
+Override environment variables with `-e` e.g. `-e APP_PORT=5001`  
+
+Similarly, build mongo database with  
+`docker build -t iot-db:<TAG> .`  
+And run container with  
+`docker run -d --name iot-db --net iot-net -p <HOST_PORT>:<CONTAINER_PORT> iot-db:<TAG>`  
+Override defaults if needed
+
