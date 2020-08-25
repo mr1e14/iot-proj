@@ -1,9 +1,11 @@
 FROM python:3
 
 # Overridable secret variables
-ENV DB_HOST=devices-db \
+ENV DB_HOST=iot-db \
     DB_PORT=27017 \
-    DB_NAME=devices \
+    DB_NAME=iot_db \
+    DB_USERNAME=app_user \
+    DB_PASSWORD=app_password \
     APP_HOST=0.0.0.0 \
     APP_PORT=5000 \
     SENSORS_API_KEY=secretDevSensorsKey \
