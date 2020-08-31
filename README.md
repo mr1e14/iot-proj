@@ -19,6 +19,11 @@ Override environment variables with `-e` e.g. `-e APP_PORT=5001`
 Similarly, build mongo database with  
 `docker build -t iot-db:<TAG> .`  
 And run container with  
-`docker run -d --name iot-db --net iot-net -p <HOST_PORT>:<CONTAINER_PORT> iot-db:<TAG>`  
-Override defaults if needed
+`docker run -d --name iot-db --net iot-net iot-db:<TAG>`  
+Override defaults if needed  
+
+**Or** do it all in one step with  
+`docker-compose up --build`  
+Note that compose is configured to mount volume to a directory on host's filesystem such that app logs are available from the host.
+Make sure that directory may be shared with Linux containers - https://docs.docker.com/docker-for-mac/#file-sharing
 

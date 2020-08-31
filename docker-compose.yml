@@ -1,0 +1,33 @@
+    app:
+        build:
+            context: ./python
+        container_name: iot_app_d
+        depends_on:
+            - db
+        environment:
+            DB_HOST: iot_db_d
+            DB_PORT: 27017
+            DB_NAME: iot_db
+            DB_USERNAME: app_user
+            DB_PASSWORD: app_password
+            APP_HOST: 0.0.0.0
+            APP_PORT: 5000
+            SENSORS_API_KEY: secretDevSensorsKey
+            LIGHTS_API_KEY: secretDevLightsKey
+        ports:
+            - "5000:5000"
+        restart: unless-stopped
+        volumes: 
+            - "~/logs:/usr/src/iot_app/logs"
+    db:
+        build:
+            context: ./mongo
+        container_name: iot_db_d
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: db_root
+            MONGO_INITDB_ROOT_PASSWORD: password
+            MONGO_INITDB_DATABASE: iot_db
+            APP_USERNAME: app_user
+            APP_PASSWORD: app_password
+        expose:
+            - "27017"
