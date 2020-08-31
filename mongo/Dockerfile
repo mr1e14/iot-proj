@@ -15,3 +15,5 @@ ADD mongo-init.sh /docker-entrypoint-initdb.d/
 VOLUME ["/data/db"]
 WORKDIR /data
 
+EXPOSE $PORT
+
