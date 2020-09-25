@@ -2,7 +2,7 @@ from flask import render_template
 from flask_ask import question, statement
 from iot_app.assets.web_assets import *
 from iot_app.iot.lights import LightManager, Light
-from iot_app.iot.sensor_readings import get_last_temp, get_last_humidity
+from iot_app.db.sensor_readings import get_last_temp, get_last_humidity
 
 from typing import Optional, List
 

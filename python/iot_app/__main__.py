@@ -2,7 +2,7 @@ from flask import Flask
 from flask_restful import Api
 from flask_ask import Ask
 from iot_app.logger.logger import get_logger
-from iot_app.iot import TemperatureResource, HumidityResource, LightResource, LightsDiscoveryResource, LightEffectResource
+from iot_app.iot.api import TemperatureResource, HumidityResource, LightResource, LightsDiscoveryResource, LightEffectResource
 from iot_app.config import secrets
 
 import iot_app.alexa as alexa

@@ -1,5 +1,5 @@
 from iot_app.logger import get_logger
-from iot_app.iot import make_api_key_validator, response_success, response_error
+from iot_app.iot.api import make_api_key_validator, response_success, response_error
 from iot_app.iot.lights import LightManager, Light, LightException
 from iot_app.config import secrets
 
