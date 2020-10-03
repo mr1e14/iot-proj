@@ -268,8 +268,11 @@ class Light:
                 self.__bulb.stop_flow()
                 self.__clear_effect()
             else:
+                effect_class = self.effects_map.get(effect_name)
+                if effect_class is None:
+                    raise LightException(f'No such effect: {effect_name}')
                 try:
-                    effect = self.effects_map[effect_name](**effect_props)
+                    effect = effect_class(**effect_props)
                     self.__bulb.start_flow(effect.get_flow())
                     self.__is_flowing = True
                     self.__effect = effect_name

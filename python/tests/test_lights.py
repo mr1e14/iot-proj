@@ -1,4 +1,4 @@
-from unittest import main, mock, TestCase
+"""from unittest import main, mock, TestCase
 import sys, time
 
 win32api_module = mock.MagicMock()
@@ -221,4 +221,4 @@ class LightsTest(TestCase):
         assert 'LOUNGE' == self.light_manager.get_default_room()
 
     if __name__ == '__main__':
-        main()
+        main()"""
