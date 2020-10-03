@@ -1,4 +1,4 @@
-from iot_app.db import db, handle_mongo_error
+from iot_app.db import DatabaseManager, handle_mongo_error
 from iot_app.logger import get_logger
 
 from marshmallow import Schema, fields, validate, ValidationError
@@ -8,7 +8,7 @@ from typing import Dict
 logging = get_logger(__name__)
 
 """ Lights collection object"""
-_lights = db['lights']
+_lights = DatabaseManager.get_collection('lights')
 
 
 class ObjectIdField(fields.Field):

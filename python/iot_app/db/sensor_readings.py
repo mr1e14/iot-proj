@@ -1,12 +1,12 @@
-from iot_app.db import db, handle_mongo_error
+from iot_app.db import DatabaseManager, handle_mongo_error
 from iot_app.logger import get_logger
 
 logging = get_logger(__name__)
 
 """ Collection object where temperature readings are stored"""
-temperature = db['temp_sensor']
+temperature = DatabaseManager.get_collection('temp_sensor')
 """ Collection of humidity sensor readings """
-humidity = db['humidity_sensor']
+humidity = DatabaseManager.get_collection('humidity_sensor')
 
 
 @handle_mongo_error
