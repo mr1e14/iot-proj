@@ -10,6 +10,8 @@ logging = get_logger(__name__)
 
 class Color:
     def __init__(self, red, green, blue):
+        if not all(Color._is_valid_rgb_part(x) for x in (red, green, blue)):
+            raise ValueError(f'Invalid RGB: {red, green, blue}')
         self.red = red
         self.green = green
         self.blue = blue
@@ -29,7 +31,7 @@ class Color:
             normalized_hex = normalize_hex(_hex)
             red, green, blue = hex_to_rgb(normalized_hex)
             return Color(red=red, green=green, blue=blue)
-        except ValueError as err:
+        except (TypeError, ValueError) as err:
             logging.error(err)
             raise ValueError('Hex color value supplied is invalid')
 
@@ -48,3 +50,9 @@ class Color:
     @property
     def hex(self) -> str:
         return rgb_to_hex(self.rgb_tuple)
+
+    @staticmethod
+    def _is_valid_rgb_part(arg):
+        if type(arg) == int:
+            return 0 <= arg <= 255
+        return False
