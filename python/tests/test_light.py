@@ -34,6 +34,10 @@ def bulb(monkeypatch):
             if not self.is_connected:
                 raise BulbException('Disconnected')
 
+        def set_rgb(self, **kwargs):
+            if not self.is_connected:
+                raise BulbException('Disconnected')
+
     mock_bulb = MockBulb()
 
     def get_bulb(ip, *args, **kwargs):
@@ -59,6 +63,12 @@ def disconnected_light_and_bulb(bulb):
     bulb.is_connected = False
     return light, bulb
 
+
+invalid_colors_data = [
+    True,
+    False,
+    None,
+    {'some': 'dict'}]
 
 offline_props = {
     'id': 'uuid123',
@@ -169,3 +179,30 @@ def test_set_effect_on_disconnected(disconnected_light_and_bulb):
     with pytest.raises(LightException):
         light.set_effect('disco')
 
+
+def test_set_color_valid_hex(connected_light_and_bulb):
+    light, _ = connected_light_and_bulb
+    light.color = '#00aa3c'
+    assert light.dump_props()['color'] == '#00aa3c'
+
+
+def test_set_color_valid_rgb(connected_light_and_bulb):
+    light, _ = connected_light_and_bulb
+    light.color = (0, 170, 60)
+    assert light.dump_props()['color'] == '#00aa3c'
+
+
+def test_set_color_obj(connected_light_and_bulb):
+    light, _ = connected_light_and_bulb
+
+    from iot_app.iot.lights.color import Color
+    color = Color.from_hex('#00aa3c')
+    light.color = color
+    assert light.dump_props()['color'] == '#00aa3c'
+
+
+@pytest.mark.parametrize('bad_color', invalid_colors_data)
+def test_set_color_invalid(connected_light_and_bulb, bad_color):
+    light, _ = connected_light_and_bulb
+    with pytest.raises(ValueError):
+        light.color = bad_color
