@@ -8,7 +8,6 @@ def bulb(monkeypatch):
     class MockBulb:
         def __init__(self):
             self.__ip = ''
-            self.__auto_on = False
             # connected by default
             self.__bulb_properties = {
                 'bright': 50,
@@ -16,25 +15,37 @@ def bulb(monkeypatch):
                 'flowing': 0,
                 'power': 'on'
             }
+            self.__on = True
             self.is_connected = True
 
         def set_ip(self, ip):
             self.__ip = ip
 
         def get_properties(self):
-            if not self.is_connected:
-                raise BulbException('Disconnected')
+            self.__raise_if_disconnected()
             return self.__bulb_properties
 
         def start_flow(self, *args):
-            if not self.is_connected:
-                raise BulbException('Disconnected')
+            self.__raise_if_disconnected()
 
         def stop_flow(self):
-            if not self.is_connected:
-                raise BulbException('Disconnected')
+            self.__raise_if_disconnected()
 
         def set_rgb(self, **kwargs):
+            self.__raise_if_disconnected()
+
+        def set_brightness(self, *args):
+            self.__raise_if_disconnected()
+
+        def turn_on(self):
+            self.__raise_if_disconnected()
+            self.__on = True
+
+        def turn_off(self):
+            self.__raise_if_disconnected()
+            self.__on = False
+
+        def __raise_if_disconnected(self):
             if not self.is_connected:
                 raise BulbException('Disconnected')
 
@@ -76,6 +87,7 @@ offline_props = {
     'is_default': True,
     'name': 'light name'
 }
+
 online_props = {
     'brightness': 50,
     'color': '#ff00ff',
@@ -84,6 +96,14 @@ online_props = {
     'is_flowing': False,
     'on': True
 }
+
+invalid_brightness = [
+    -1,
+    0,
+    101,
+    None,
+    "str"
+]
 
 
 def test_dump_props_connected(connected_light_and_bulb):
@@ -206,3 +226,75 @@ def test_set_color_invalid(connected_light_and_bulb, bad_color):
     light, _ = connected_light_and_bulb
     with pytest.raises(ValueError):
         light.color = bad_color
+
+
+def test_set_valid_name(disconnected_light_and_bulb):
+    light, bulb = disconnected_light_and_bulb
+
+    new_name = 'Some light'
+    assert light.name != new_name
+    light.name = new_name
+    assert light.name == new_name
+
+
+def test_set_invalid_name(disconnected_light_and_bulb):
+    light, _ = disconnected_light_and_bulb
+
+    too_many_chars = ('x' * 33)
+    with pytest.raises(ValueError):
+        light.name = too_many_chars
+
+
+def test_set_is_default(disconnected_light_and_bulb):
+    light, _ = disconnected_light_and_bulb
+
+    assert light.is_default is True
+
+    light.is_default = False
+    assert light.is_default is False
+
+    light.is_default = True
+
+
+def test_set_valid_brightness(connected_light_and_bulb):
+    light, _ = connected_light_and_bulb
+
+    assert light.brightness == 50
+
+    light.brightness = 100
+    assert light.brightness == 100
+
+
+@pytest.mark.parametrize('bad_brightness', invalid_brightness)
+def test_set_invalid_brightness(connected_light_and_bulb, bad_brightness):
+    light, _ = connected_light_and_bulb
+
+    with pytest.raises(Exception):
+        light.brightness = bad_brightness
+
+
+def test_disconnect_then_set_brightness(connected_light_and_bulb):
+    light, bulb = connected_light_and_bulb
+    from iot_app.iot.lights import LightException
+
+    assert light.dump_props() == {**offline_props, **online_props, 'is_connected': True}
+
+    bulb.is_connected = False
+
+    with pytest.raises(LightException):
+        light.brightness = 25
+
+    assert light.dump_props() == {**offline_props, 'is_connected': False}
+
+
+def test_turn_on_and_off(connected_light_and_bulb):
+    light, _ = connected_light_and_bulb
+
+    assert light.on is True
+
+    light.on = False
+    assert light.on is False
+
+    light.on = True
+    assert light.on is True
+
