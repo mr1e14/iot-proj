@@ -4,8 +4,7 @@ from iot_app.logger import get_logger
 from iot_app.config import config
 from iot_app.iot.lights.light import Light
 
-from yeelight import Flow, discover_bulbs
-from yeelight.transitions import *
+from yeelight import discover_bulbs
 from concurrent.futures.thread import ThreadPoolExecutor
 from bson.objectid import ObjectId
 from typing import List, Dict
@@ -35,31 +34,9 @@ class LightManager:
             self.__do_lights_discovery()
             LightManager.__instance = self
 
-    @staticmethod
-    def instance() -> LightManager:
-        if LightManager.__instance is None:
-            LightManager()
-        return LightManager.__instance
-
-    @staticmethod
-    def __save_new_lights(bulb_info: List[Dict]):
-        """
-        Saves bulbs that are not yet in the database
-        :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently
-        connected on the network
-        """
-        db_lights = db.get_lights()
-        for bulb in bulb_info:
-            if bulb['ip'] not in db_lights.distinct('ip'):
-                db.save_new_light({
-                    'ip': bulb['ip'],
-                    'name': bulb['capabilities']['name'],
-                    'is_default': False
-                })
-
     def get_light_by_name(self, name):
         for light in self.__lights:
-            if light.name == name.upper():
+            if light.name.upper() == name.upper():
                 return light
         return None
 
@@ -72,18 +49,6 @@ class LightManager:
     @property
     def default_lights(self):
         return [light for light in self.__lights if light.is_default]
-
-    def notify(self, level=NotificationLevel.INFO, *bulbs):
-        logging.info(f'Flashing notification ({level})')
-
-        red, green, blue = level
-        flow = Flow(count=3, transitions=pulse(red, green, blue, duration=_lights_config['notify_duration']))
-
-        if len(bulbs) == 0:
-            bulbs = [self.default_lights]
-
-        for bulb in bulbs:
-            bulb.start_flow(flow)
 
     def get_all_lights(self) -> List[Light]:
         return self.__lights
@@ -117,3 +82,25 @@ class LightManager:
             if light.ip == ip:
                 return light
         return None
+
+    @staticmethod
+    def instance() -> LightManager:
+        if LightManager.__instance is None:
+            LightManager()
+        return LightManager.__instance
+
+    @staticmethod
+    def __save_new_lights(bulb_info: List[Dict]):
+        """
+        Saves bulbs that are not yet in the database
+        :param bulb_info: list of dictionaries, each representing information about an individual bulb, currently
+        connected on the network
+        """
+        db_lights = db.get_lights()
+        for bulb in bulb_info:
+            if bulb['ip'] not in db_lights.distinct('ip'):
+                db.save_new_light({
+                    'ip': bulb['ip'],
+                    'name': bulb['capabilities']['name'],
+                    'is_default': False
+                })
