@@ -16,7 +16,7 @@ MarkupSafe==1.0
 pycparser==2.18
 pyOpenSSL==17.0.0
 python-dateutil==2.7.3
-PyYAML==3.12
+PyYAML==5.4
 six==1.11.0
 Werkzeug==0.14.1
 yeelight==0.4.3
